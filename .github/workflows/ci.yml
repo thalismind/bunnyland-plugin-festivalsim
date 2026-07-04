@@ -8,18 +8,18 @@ permissions:
   contents: read
 
 jobs:
-  server:
-    name: Server Plugin (lint + tests)
+  lint-and-test:
+    name: Lint & Test
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout festivalsim plugin
+      - name: Checkout plugin
         uses: actions/checkout@v4
         with:
-          path: bunnyland-festivalsim
+          path: plugin
 
-      # The plugin runs against a sibling bunnyland-server checkout: tests/conftest.py
-      # puts ../bunnyland-server/src on sys.path, and its virtualenv provides bunnyland +
-      # relics + ruff. This mirrors local development instead of building a container.
+      # The plugin runs against a sibling bunnyland-server checkout: tests/conftest.py puts
+      # ../bunnyland-server/src on sys.path, and its virtualenv provides bunnyland, relics,
+      # ruff, and pytest. No container build.
       - name: Checkout bunnyland-server
         uses: actions/checkout@v4
         with:
@@ -31,10 +31,25 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
-      - name: Lint
-        working-directory: bunnyland-festivalsim/server
-        run: uv run --project ../../bunnyland-server ruff check src tests
+      - name: Ruff (lint)
+        working-directory: plugin/server
+        run: uv run --project ../../bunnyland-server ruff check --output-format=github src tests
 
-      - name: Test
-        working-directory: bunnyland-festivalsim/server
-        run: uv run --project ../../bunnyland-server -m pytest
+      - name: Pytest (test report + coverage)
+        working-directory: plugin/server
+        run: |
+          mkdir -p reports
+          uv run --project ../../bunnyland-server -m pytest \
+            --junit-xml=reports/junit.xml \
+            --cov=src --cov-report=xml:reports/coverage.xml --cov-report=term \
+            | tee reports/pytest.txt
+          echo "### Test summary" >> "$GITHUB_STEP_SUMMARY"
+          tail -n 1 reports/pytest.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: plugin/server/reports/
+          if-no-files-found: warn
