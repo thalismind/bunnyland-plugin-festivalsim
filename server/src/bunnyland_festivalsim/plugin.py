@@ -34,7 +34,7 @@ from .enrichment import FestivalWorldgenHook
 from .gifts import GIFT_ACTION_DEFINITIONS, GIFT_ACTION_HANDLERS, GiftGivenEvent
 from .install import install_festivalsim
 
-PLUGIN_ID = "bunnyland_festivalsim"
+PLUGIN_ID = "bunnyland.festivalsim"
 
 
 def plugin() -> Plugin:
