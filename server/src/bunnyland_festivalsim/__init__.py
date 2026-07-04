@@ -1,6 +1,6 @@
 """Out-of-tree Bunnyland plugin: a calendar of seasonal festivals.
 
-A Sims-4-expansion-sized social pack. A :class:`FestivalConsequence` hangs recurring
+An expansion-pack-sized social pack. A :class:`FestivalConsequence` hangs recurring
 festivals on the world clock (spring bloom, high summer, harvest fair, midwinter), opening
 and closing them on schedule. Around that calendar it adds decorations, gift-giving,
 contests (an open hook other packs plug entries into), and a festive seasonal mood lift.

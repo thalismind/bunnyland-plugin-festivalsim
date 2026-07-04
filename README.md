@@ -2,7 +2,7 @@
 
 Out-of-tree [Bunnyland](https://github.com/thalismind/bunnyland-server) plugin that hangs
 **seasonal festivals and community events** on the world clock — recurring occasions with
-decorations, gifts, and contests that pull characters together. A Sims-4-expansion-sized
+decorations, gifts, and contests that pull characters together. An expansion-pack-sized
 social pack that gives the calendar a heartbeat and a reason for everyone to be in the same
 room.
 
