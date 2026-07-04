@@ -8,3 +8,7 @@ artifacts/
 __pycache__/
 *.py[cod]
 .venv/
+.coverage
+coverage.xml
+htmlcov/
+reports/
