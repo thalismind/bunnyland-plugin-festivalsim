@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  server:
+    name: Server Plugin (lint + tests)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout festivalsim plugin
+        uses: actions/checkout@v4
+        with:
+          path: bunnyland-festivalsim
+
+      # The plugin runs against a sibling bunnyland-server checkout: tests/conftest.py
+      # puts ../bunnyland-server/src on sys.path, and its virtualenv provides bunnyland +
+      # relics + ruff. This mirrors local development instead of building a container.
+      - name: Checkout bunnyland-server
+        uses: actions/checkout@v4
+        with:
+          repository: thalismind/bunnyland-server
+          ref: main
+          path: bunnyland-server
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Lint
+        working-directory: bunnyland-festivalsim/server
+        run: uv run --project ../../bunnyland-server ruff check src tests
+
+      - name: Test
+        working-directory: bunnyland-festivalsim/server
+        run: uv run --project ../../bunnyland-server -m pytest
