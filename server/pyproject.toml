@@ -1,7 +1,7 @@
 [project]
 name = "bunnyland-festivalsim"
-version = "0.1.0"
-description = "Out-of-tree Bunnyland plugin: a calendar of seasonal festivals with decorations, gift-giving, contests, and festive seasonal mood."
+version = "0.2.0"
+description = "Out-of-tree Bunnyland plugin: seasonal + host-your-own festivals with decorations, gift-giving, contests, fairground games, and spectacle."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

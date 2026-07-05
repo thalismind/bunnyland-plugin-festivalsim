@@ -38,10 +38,12 @@ jobs:
       - name: Pytest (test report + coverage)
         working-directory: plugin/server
         run: |
+          set -o pipefail
           mkdir -p reports
           uv run --project ../../bunnyland-server -m pytest \
             --junit-xml=reports/junit.xml \
-            --cov=src --cov-report=xml:reports/coverage.xml --cov-report=term \
+            --cov=src --cov-branch --cov-fail-under=95 \
+            --cov-report=xml:reports/coverage.xml --cov-report=term \
             | tee reports/pytest.txt
           echo "### Test summary" >> "$GITHUB_STEP_SUMMARY"
           tail -n 1 reports/pytest.txt >> "$GITHUB_STEP_SUMMARY"

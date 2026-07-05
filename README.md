@@ -20,10 +20,23 @@ The bundle:
   run a bake-off/biggest-fish/best-song, and the winner gets a trophy and reputation.
 - **Seasonal mood** — a `SeasonalMoodConsequence` lifts everyone's `AffectComponent` while a
   festival is active.
+- **Host-your-own festivals** (v2 headline) — a `host-festival` verb throws a festival in any
+  room on any day, registered as a **core storyteller incident** (`IncidentComponent`) and
+  written to world history with an imagegen illustration. `attend-festival` warms the
+  guest↔host `SocialBond`, and `end-festival` resolves the incident.
+- **Fairground games** (v2) — a `play-game` verb tries a `GameBoothComponent` booth; the
+  win/lose outcome is a deterministic hash of player, booth, and prior plays, and a win drops
+  a prize in your hands.
+- **Spectacle** (v2) — a `launch-fireworks` verb dazzles the room, and (optionally, when
+  `starsim` is loaded) a meteor shower overhead becomes a shared spectacle over live
+  festivals.
 
 The "contest entry" hook other packs plug into is an **open component/registry in this
-package** — Festivalsim depends on no other plugin package. Festivals are driven entirely by
-the calendar (no wall-clock time, no randomness), so worlds replay deterministically.
+package**; sibling packs' derby/bake-off/gig/game achievements are folded into a live
+festival's contest by name, with **no hard dependency** on any of them (optional partners are
+declared as `recommends`, and a festival runs fully standalone). Festivals are driven entirely
+by the calendar and stable hashes (no wall-clock time, no randomness), so worlds replay
+deterministically.
 
 This repo intentionally keeps all festival work outside the main `bunnyland-server` repo.
 
@@ -37,15 +50,23 @@ This repo intentionally keeps all festival work outside the main `bunnyland-serv
 
 The plugin exposes `bunnyland_festivalsim.bunnyland_plugins()` and contributes:
 
-- `FestivalComponent`, `DecorationComponent`, `ContestComponent`, `ReputationComponent`.
+- `FestivalComponent`, `DecorationComponent`, `ContestComponent`, `ReputationComponent`,
+  `HostedFestivalComponent`, `GameBoothComponent`, `SpectacleComponent`.
+- Typed edges: `ContestEntry`, `Hosts`, `AttendsFestival`, `Participates`.
 - `FestivalConsequence` — opens/closes festivals on the calendar and emits
   `FestivalOpenedEvent` / `FestivalClosedEvent`.
 - `SeasonalMoodConsequence` — lifts every active character's mood while a festival runs.
-- `decorate`, `give-gift`, `enter-contest`, `judge-contest` — the player/AI verbs.
+- `MeteorShowerSpectacleConsequence` — turns a starsim meteor shower into a festival
+  spectacle (disabled with a logged warning when starsim is absent).
+- `FestivalStageReactor` — folds sibling packs' achievement events into a live festival's
+  open contest, purely by event name.
+- `decorate`, `give-gift`, `enter-contest`, `judge-contest`, `host-festival`,
+  `attend-festival`, `end-festival`, `play-game`, `launch-fireworks` — the player/AI verbs.
 - `register_contest_entry` — the open hook other packs call to enter their own loot.
-- `festival_fragments`, `decoration_fragments`, `contest_fragments` — prompt fragments.
+- `festival_fragments`, `decoration_fragments`, `contest_fragments`, `hosting_fragments`,
+  `game_fragments`, `spectacle_fragments` — prompt fragments.
 - `FestivalWorldgenHook` — dresses generated town squares with decorations and a contest.
-- `spawn_decoration`, `spawn_contest` — spawn factories.
+- `spawn_decoration`, `spawn_contest`, `spawn_booth`, `spawn_spectacle` — spawn factories.
 
 ## Running
 
