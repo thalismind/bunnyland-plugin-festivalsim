@@ -32,7 +32,7 @@ from .decorations import (
     RoomDecoratedEvent,
     decoration_fragments,
 )
-from .enrichment import FestivalWorldgenHook
+from .enrichment import FestivalGenerationEnricher
 from .games import (
     GAME_ACTION_DEFINITIONS,
     GAME_ACTION_HANDLERS,
@@ -140,7 +140,7 @@ def plugin() -> Plugin:
                 game_fragments,
                 spectacle_fragments,
             ),
-            worldgen_hooks=(FestivalWorldgenHook,),
+            generation_enrichers=(FestivalGenerationEnricher(),),
         ),
     )
 

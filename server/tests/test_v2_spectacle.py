@@ -15,8 +15,8 @@ from bunnyland.core import (
 from bunnyland.core.commands import CommandCost, Lane, build_submitted_command
 from bunnyland.core.components import WorldClockComponent
 from bunnyland.core.handlers import HandlerContext
+from bunnyland.foundation.history.mechanics import WorldHistoryRecordComponent
 from bunnyland.imagegen import ImageRequestComponent
-from bunnyland.mechanics.history import WorldHistoryRecordComponent
 
 from bunnyland_festivalsim.hosting import HostedFestivalComponent
 from bunnyland_festivalsim.spectacle import (
@@ -113,25 +113,19 @@ def test_launch_fireworks_dazzles_the_room_and_records_history():
 
     assert result.ok
     assert isinstance(result.events[0], FireworksLaunchedEvent)
-    spectacles = list(
-        actor.world.query().with_all([SpectacleComponent]).execute_entities()
-    )
+    spectacles = list(actor.world.query().with_all([SpectacleComponent]).execute_entities())
     assert len(spectacles) == 1
     assert spectacles[0].get_component(SpectacleComponent).kind == "fireworks"
     assert list(launcher.get_relationships(HasThought))
     assert list(bystander.get_relationships(HasThought))
-    records = list(
-        actor.world.query().with_all([WorldHistoryRecordComponent]).execute_entities()
-    )
+    records = list(actor.world.query().with_all([WorldHistoryRecordComponent]).execute_entities())
     assert len(records) == 1
     assert records[0].has_component(ImageRequestComponent)
 
 
 def test_launch_fireworks_rejects_invalid_character():
     actor = WorldActor()
-    result = LaunchFireworksHandler().execute(
-        _ctx(actor), _cmd("???", "launch-fireworks", {})
-    )
+    result = LaunchFireworksHandler().execute(_ctx(actor), _cmd("???", "launch-fireworks", {}))
     assert not result.ok
     assert result.reason == "invalid character id"
 
@@ -142,9 +136,7 @@ def test_launch_fireworks_rejects_when_not_in_a_room():
         actor.world,
         [IdentityComponent(name="Pyro", kind="character"), CharacterComponent()],
     )
-    result = LaunchFireworksHandler().execute(
-        _ctx(actor), _cmd(loose.id, "launch-fireworks", {})
-    )
+    result = LaunchFireworksHandler().execute(_ctx(actor), _cmd(loose.id, "launch-fireworks", {}))
     assert not result.ok
     assert result.reason == "you are not in a room"
 
@@ -172,7 +164,7 @@ def test_meteor_consequence_disabled_with_partner_present_does_not_warn():
     _clock(actor.world)
     # a present-but-quiet partner: resolver probe returns a callable, overhead still False
     consequence = MeteorShowerSpectacleConsequence(
-        overhead=lambda day: False, resolver_probe=lambda: (lambda day: "clear sky")
+        overhead=lambda day: False, resolver_probe=lambda: lambda day: "clear sky"
     )
     assert consequence.process(actor.world, EPOCH) == []
 

@@ -141,9 +141,7 @@ def test_play_game_tracks_players_independently():
     first = _character(actor.world, room, "Ada")
     second = _character(actor.world, room, "Bea")
     booth = spawn_booth(actor.world, room_id=room.id, difficulty=0.0)
-    PlayGameHandler().execute(
-        _ctx(actor), _cmd(first.id, "play-game", {"booth_id": str(booth.id)})
-    )
+    PlayGameHandler().execute(_ctx(actor), _cmd(first.id, "play-game", {"booth_id": str(booth.id)}))
     PlayGameHandler().execute(
         _ctx(actor), _cmd(second.id, "play-game", {"booth_id": str(booth.id)})
     )

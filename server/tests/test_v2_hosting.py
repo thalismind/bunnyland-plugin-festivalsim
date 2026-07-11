@@ -14,14 +14,14 @@ from bunnyland.core import (
 )
 from bunnyland.core.commands import CommandCost, Lane, build_submitted_command
 from bunnyland.core.handlers import HandlerContext
-from bunnyland.imagegen import ImageRequestComponent
-from bunnyland.mechanics.history import WorldHistoryRecordComponent
-from bunnyland.mechanics.social import bond_between
-from bunnyland.mechanics.storyteller import (
+from bunnyland.foundation.history.mechanics import WorldHistoryRecordComponent
+from bunnyland.foundation.social.mechanics import bond_between
+from bunnyland.foundation.storyteller.mechanics import (
     IncidentComponent,
     IncidentResolvedEvent,
     IncidentStartedEvent,
 )
+from bunnyland.imagegen import ImageRequestComponent
 
 from bunnyland_festivalsim.hosting import (
     AttendFestivalHandler,
@@ -104,19 +104,13 @@ def test_host_festival_spawns_festival_incident_and_history():
     assert component.host_id == str(host.id)
     assert not component.ended
     # host -> festival typed edge
-    assert any(
-        target == festivals[0].id for _edge, target in host.get_relationships(Hosts)
-    )
+    assert any(target == festivals[0].id for _edge, target in host.get_relationships(Hosts))
     # a storyteller incident was registered
-    incidents = list(
-        actor.world.query().with_all([IncidentComponent]).execute_entities()
-    )
+    incidents = list(actor.world.query().with_all([IncidentComponent]).execute_entities())
     assert len(incidents) == 1
     assert incidents[0].get_component(IncidentComponent).kind == "festival"
     # a world-history record marked for an imagegen picture
-    records = list(
-        actor.world.query().with_all([WorldHistoryRecordComponent]).execute_entities()
-    )
+    records = list(actor.world.query().with_all([WorldHistoryRecordComponent]).execute_entities())
     assert len(records) == 1
     assert records[0].has_component(ImageRequestComponent)
 
@@ -323,8 +317,9 @@ def test_end_festival_without_a_live_incident_still_ends():
         actor.world,
         [
             IdentityComponent(name="revel festival", kind="festival"),
-            HostedFestivalComponent(key="hosted", theme="revel", host_id=str(host.id),
-                                    incident_id=""),
+            HostedFestivalComponent(
+                key="hosted", theme="revel", host_id=str(host.id), incident_id=""
+            ),
         ],
     )
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), festival.id)
@@ -347,8 +342,9 @@ def test_end_festival_ignores_a_non_incident_reference():
         actor.world,
         [
             IdentityComponent(name="revel festival", kind="festival"),
-            HostedFestivalComponent(key="hosted", theme="revel", host_id=str(host.id),
-                                    incident_id=str(decoy.id)),
+            HostedFestivalComponent(
+                key="hosted", theme="revel", host_id=str(host.id), incident_id=str(decoy.id)
+            ),
         ],
     )
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), festival.id)

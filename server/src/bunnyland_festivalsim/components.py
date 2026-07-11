@@ -3,7 +3,7 @@
 Three components carry the pack's persistent state:
 
 - :class:`FestivalComponent` is the **singleton** current-festival marker. Like the core
-  :class:`~bunnyland.mechanics.environment.CalendarComponent`, it lives on the world clock
+  Foundation ``CalendarComponent``, it lives on the world clock
   entity and is set/cleared by :class:`~bunnyland_festivalsim.calendar.FestivalConsequence`
   as the calendar opens and closes festivals.
 - :class:`DecorationComponent` sits on a placed decoration entity (a lantern, a banner)

@@ -53,8 +53,9 @@ def _link_into_room(world: World, item: Entity, room_id) -> None:
     world.get_entity(room_id).add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), item.id)
 
 
-def spawn_decoration(world: World, *, room_id=None, kind: str = "lantern",
-                     festive: float = 1.0) -> Entity:
+def spawn_decoration(
+    world: World, *, room_id=None, kind: str = "lantern", festive: float = 1.0
+) -> Entity:
     """Spawn a decoration entity, optionally placed in ``room_id``."""
     decoration = spawn_entity(
         world,

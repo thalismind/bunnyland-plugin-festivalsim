@@ -1,7 +1,7 @@
 """The calendar of festivals.
 
 A :class:`FestivalConsequence` reads the world clock every tick, derives the current day
-and season with the core :func:`~bunnyland.mechanics.environment.time_of_day` helper, and
+and season with the core :func:`~bunnyland.foundation.environment.mechanics.time_of_day` helper, and
 **opens and closes festivals on a fixed schedule**. The current festival is stored as the
 singleton :class:`~bunnyland_festivalsim.components.FestivalComponent` on the world clock
 entity (the same place the core calendar/time-of-day singletons live), and each transition
@@ -19,7 +19,7 @@ from functools import partial
 from bunnyland.core.components import WorldClockComponent
 from bunnyland.core.ecs import replace_component
 from bunnyland.core.events import DomainEvent, EventVisibility, event_base
-from bunnyland.mechanics.environment import DAYS_PER_SEASON, time_of_day
+from bunnyland.foundation.environment.mechanics import DAYS_PER_SEASON, time_of_day
 from bunnyland.prompts.context import ComponentPromptContext
 from pydantic.dataclasses import dataclass
 from relics import Entity, World
@@ -44,14 +44,16 @@ class FestivalDefinition:
 #: The recurring festival calendar. Sorted by key so lookups are order-independent. Windows
 #: within a season never overlap, so at most one festival is active on any given day.
 FESTIVAL_SCHEDULE: tuple[FestivalDefinition, ...] = (
-    FestivalDefinition("harvest-fair", "Harvest Fair", "autumn", start_day=8, duration=4,
-                       mood_lift=0.8),
-    FestivalDefinition("high-summer", "High Summer", "summer", start_day=14, duration=3,
-                       mood_lift=0.7),
-    FestivalDefinition("midwinter", "Midwinter", "winter", start_day=24, duration=5,
-                       mood_lift=1.0),
-    FestivalDefinition("spring-bloom", "Spring Bloom", "spring", start_day=3, duration=3,
-                       mood_lift=0.6),
+    FestivalDefinition(
+        "harvest-fair", "Harvest Fair", "autumn", start_day=8, duration=4, mood_lift=0.8
+    ),
+    FestivalDefinition(
+        "high-summer", "High Summer", "summer", start_day=14, duration=3, mood_lift=0.7
+    ),
+    FestivalDefinition("midwinter", "Midwinter", "winter", start_day=24, duration=5, mood_lift=1.0),
+    FestivalDefinition(
+        "spring-bloom", "Spring Bloom", "spring", start_day=3, duration=3, mood_lift=0.6
+    ),
 )
 
 

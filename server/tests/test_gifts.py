@@ -14,7 +14,7 @@ from bunnyland.core import (
 from bunnyland.core.commands import CommandCost, Lane, build_submitted_command
 from bunnyland.core.ecs import replace_component
 from bunnyland.core.handlers import HandlerContext
-from bunnyland.mechanics.social import bond_between
+from bunnyland.foundation.social.mechanics import bond_between
 
 from bunnyland_festivalsim import GiftGivenEvent, GiveGiftHandler
 from bunnyland_festivalsim.components import FestivalComponent

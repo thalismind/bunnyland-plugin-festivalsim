@@ -1,7 +1,7 @@
 """Gift-giving: hand an item to someone and warm the bond between you.
 
 The ``give-gift`` verb transfers a held item from the giver to a recipient standing in the
-same room and grows the reciprocal :class:`~bunnyland.mechanics.social.SocialBond` between
+same room and grows the reciprocal Foundation ``SocialBond`` between
 them. During an active festival the bond boost is larger — gifts mean more on a feast day.
 
 Validation order: invalid giver -> missing giver -> invalid item -> missing item -> not
@@ -28,7 +28,7 @@ from bunnyland.core.handlers import (
     require_character,
     require_entity,
 )
-from bunnyland.mechanics.social import adjust_bond
+from bunnyland.foundation.social.mechanics import adjust_bond
 
 from .calendar import active_festival
 from .spatial import holder_of, room_of

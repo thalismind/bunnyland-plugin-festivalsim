@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from bunnyland.core import WorldActor, WorldClockComponent
 from bunnyland.core.ecs import replace_component
-from bunnyland.mechanics.environment import SECONDS_PER_DAY
+from bunnyland.foundation.environment.mechanics import SECONDS_PER_DAY
 
 from bunnyland_festivalsim import (
     FestivalClosedEvent,

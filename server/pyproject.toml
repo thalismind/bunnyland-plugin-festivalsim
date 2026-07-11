@@ -10,6 +10,9 @@ dependencies = [
     "relics",
 ]
 
+[project.entry-points."bunnyland.plugins"]
+"bunnyland.festivalsim" = "bunnyland_festivalsim.plugin:bunnyland_plugins"
+
 [dependency-groups]
 dev = [
     "pytest>=8.0",

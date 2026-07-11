@@ -62,9 +62,8 @@ def _decorations_in(world, room):
     return [
         world.get_entity(entity_id)
         for entity_id in contents(room)
-        if world.has_entity(entity_id) and world.get_entity(entity_id).has_component(
-            DecorationComponent
-        )
+        if world.has_entity(entity_id)
+        and world.get_entity(entity_id).has_component(DecorationComponent)
     ]
 
 

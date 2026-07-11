@@ -37,9 +37,9 @@ from bunnyland.core.handlers import (
     rejected,
     require_character,
 )
+from bunnyland.foundation.environment.mechanics import time_of_day
+from bunnyland.foundation.history.mechanics import record_world_history
 from bunnyland.imagegen import ImagePurpose, ImageRequestComponent
-from bunnyland.mechanics.environment import time_of_day
-from bunnyland.mechanics.history import record_world_history
 from bunnyland.prompts.context import ComponentPromptContext
 from pydantic.dataclasses import dataclass
 from relics import Component, Entity, World
@@ -100,8 +100,9 @@ def meteor_shower_overhead(day: int, *, resolver=None) -> bool:
     return resolve(day) == METEOR_SHOWER
 
 
-def spawn_spectacle(world: World, *, room_id, kind: str = "fireworks",
-                    brilliance: float = 1.0, day: int = 0) -> Entity:
+def spawn_spectacle(
+    world: World, *, room_id, kind: str = "fireworks", brilliance: float = 1.0, day: int = 0
+) -> Entity:
     """Spawn a spectacle over ``room_id``."""
     spectacle = spawn_entity(
         world,
@@ -195,8 +196,9 @@ class MeteorShowerSpectacleConsequence:
     ``False`` and this consequence quietly does nothing but note the disabled feature once.
     """
 
-    def __init__(self, *, overhead=meteor_shower_overhead,
-                 resolver_probe=_starsim_celestial_resolver):
+    def __init__(
+        self, *, overhead=meteor_shower_overhead, resolver_probe=_starsim_celestial_resolver
+    ):
         self._overhead = overhead
         self._resolver_probe = resolver_probe
         self._warned = False
@@ -216,9 +218,7 @@ class MeteorShowerSpectacleConsequence:
             room = room_of(world, festival.id)
             if room is None or _has_meteor_spectacle(world, room, day):
                 continue
-            spectacle = spawn_spectacle(
-                world, room_id=room.id, kind=METEOR_SHOWER, day=day
-            )
+            spectacle = spawn_spectacle(world, room_id=room.id, kind=METEOR_SHOWER, day=day)
             _dazzle_room(world, room, epoch)
             events.append(
                 MeteorShowerSpectacleEvent(
@@ -240,9 +240,7 @@ class MeteorShowerSpectacleConsequence:
             return
         self._warned = True
         if self._resolver_probe() is None:
-            LOG.warning(
-                "starsim not loaded: meteor-shower festival spectacle stays disabled"
-            )
+            LOG.warning("starsim not loaded: meteor-shower festival spectacle stays disabled")
 
 
 def _clock(world: World) -> Entity | None:

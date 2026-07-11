@@ -86,8 +86,7 @@ class ContestJudgedEvent(DomainEvent):
     entry_id: str
 
 
-def spawn_contest(world: World, *, room_id=None, kind: str = "bake-off",
-                  title: str = "") -> Entity:
+def spawn_contest(world: World, *, room_id=None, kind: str = "bake-off", title: str = "") -> Entity:
     """Spawn a contest entity, optionally placed in ``room_id``."""
     contest = spawn_entity(
         world,
@@ -176,7 +175,11 @@ class EnterContestHandler:
             return rejected("that entry is already in the contest")
         score = float(command.payload.get("score", 1.0))
         register_contest_entry(
-            ctx.world, contest, entry_id, entrant_id=str(character_id), score=score,
+            ctx.world,
+            contest,
+            entry_id,
+            entrant_id=str(character_id),
+            score=score,
             epoch=ctx.epoch,
         )
         return ok(

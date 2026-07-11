@@ -75,8 +75,14 @@ class GamePlayedEvent(DomainEvent):
     won: bool
 
 
-def spawn_booth(world: World, *, room_id=None, game: str = "ring toss",
-                difficulty: float = 0.5, prize: str = "ribbon") -> Entity:
+def spawn_booth(
+    world: World,
+    *,
+    room_id=None,
+    game: str = "ring toss",
+    difficulty: float = 0.5,
+    prize: str = "ribbon",
+) -> Entity:
     """Spawn a game booth, optionally placed in ``room_id``."""
     booth = spawn_entity(
         world,

@@ -66,9 +66,7 @@ def _fake(cls, *, actor_id, target_ids=(), epoch=EPOCH):
 def test_festival_is_live_via_calendar_festival():
     actor = WorldActor()
     clock = list(actor.world.query().with_all([WorldClockComponent]).execute_entities())[0]
-    clock.add_component(
-        FestivalComponent(key="spring-bloom", name="Spring Bloom", season="spring")
-    )
+    clock.add_component(FestivalComponent(key="spring-bloom", name="Spring Bloom", season="spring"))
     assert festival_is_live(actor.world) is True
 
 

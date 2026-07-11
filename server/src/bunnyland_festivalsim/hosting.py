@@ -5,14 +5,14 @@ calendar. Hosting spawns a festival entity in the room and, crucially, wires it 
 of the world through core systems rather than reinventing them:
 
 - The festival is **registered as a storyteller incident** (a core
-  :class:`~bunnyland.mechanics.storyteller.IncidentComponent`), so a hosted festival is a
+  :class:`~bunnyland.foundation.storyteller.mechanics.IncidentComponent`), so a hosted festival is a
   paced, first-class world event the storyteller and other packs can see and react to. Ending
   the festival resolves that incident.
 - The festival night is written to **world history** and marked for an **imagegen**
   illustration, so the museum/gossip-sheet can show the party later.
 - Relationships use **typed edges**: :class:`Hosts` (host -> festival) and
   :class:`AttendsFestival` (attendee -> festival). *Affective* warmth from attending routes
-  through the core :class:`~bunnyland.mechanics.social.SocialBond` and an affect thought.
+  through the core :class:`~bunnyland.foundation.social.mechanics.SocialBond` and an affect thought.
 
 Nothing here is random: outcomes are a pure function of the world state and the epoch.
 """
@@ -42,14 +42,14 @@ from bunnyland.core.handlers import (
     require_character,
     require_entity,
 )
-from bunnyland.imagegen import ImagePurpose, ImageRequestComponent
-from bunnyland.mechanics.history import record_world_history
-from bunnyland.mechanics.social import adjust_bond
-from bunnyland.mechanics.storyteller import (
+from bunnyland.foundation.history.mechanics import record_world_history
+from bunnyland.foundation.social.mechanics import adjust_bond
+from bunnyland.foundation.storyteller.mechanics import (
     IncidentComponent,
     IncidentResolvedEvent,
     IncidentStartedEvent,
 )
+from bunnyland.imagegen import ImagePurpose, ImageRequestComponent
 from bunnyland.prompts.context import ComponentPromptContext
 from pydantic.dataclasses import dataclass
 from relics import Edge, Entity, World
@@ -213,8 +213,7 @@ class HostFestivalHandler:
         festival = spawn_entity(
             ctx.world,
             [
-                IdentityComponent(name=f"{theme} festival", kind="festival",
-                                  tags=("festivalsim",)),
+                IdentityComponent(name=f"{theme} festival", kind="festival", tags=("festivalsim",)),
                 HostedFestivalComponent(
                     key="hosted",
                     name=f"{theme} festival",
@@ -242,8 +241,12 @@ class HostFestivalHandler:
             )
         )
         _remember_the_night(
-            ctx.world, host=host, festival=festival, room=room,
-            event_id=hosted.event_id, epoch=ctx.epoch,
+            ctx.world,
+            host=host,
+            festival=festival,
+            room=room,
+            event_id=hosted.event_id,
+            epoch=ctx.epoch,
         )
         started = IncidentStartedEvent(
             **ctx.event_base(

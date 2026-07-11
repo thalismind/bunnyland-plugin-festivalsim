@@ -107,8 +107,11 @@ def test_enter_contest_registers_a_held_entry():
 
     result = EnterContestHandler().execute(
         _ctx(actor),
-        _cmd(character.id, "enter-contest", {"contest_id": str(contest.id),
-                                             "entry_id": str(pie.id), "score": 3.0}),
+        _cmd(
+            character.id,
+            "enter-contest",
+            {"contest_id": str(contest.id), "entry_id": str(pie.id), "score": 3.0},
+        ),
     )
 
     assert result.ok
@@ -227,8 +230,11 @@ def test_enter_contest_rejects_missing_entry():
     contest = spawn_contest(actor.world, room_id=room.id)
     result = EnterContestHandler().execute(
         _ctx(actor),
-        _cmd(character.id, "enter-contest",
-             {"contest_id": str(contest.id), "entry_id": "entity_9999"}),
+        _cmd(
+            character.id,
+            "enter-contest",
+            {"contest_id": str(contest.id), "entry_id": "entity_9999"},
+        ),
     )
     assert not result.ok
     assert result.reason == "entry does not exist"

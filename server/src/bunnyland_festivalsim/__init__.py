@@ -42,7 +42,7 @@ from .decorations import (
     room_festivity,
     spawn_decoration,
 )
-from .enrichment import FestivalWorldgenHook
+from .enrichment import FestivalGenerationEnricher
 from .games import (
     GAME_ACTION_DEFINITIONS,
     GAME_ACTION_HANDLERS,
@@ -145,7 +145,7 @@ __all__ = [
     "FestivalHostedEvent",
     "FestivalOpenedEvent",
     "FestivalStageReactor",
-    "FestivalWorldgenHook",
+    "FestivalGenerationEnricher",
     "FireworksLaunchedEvent",
     "GameBoothComponent",
     "GamePlayedEvent",
