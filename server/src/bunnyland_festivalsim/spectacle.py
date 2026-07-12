@@ -26,8 +26,8 @@ from bunnyland.core import (
     contents,
     spawn_entity,
 )
-from bunnyland.core.actions import ActionDefinition
-from bunnyland.core.commands import CommandCost, Lane, SubmittedCommand
+from bunnyland.core.actions import ActionDefinition, ActionEffort, effort_cost
+from bunnyland.core.commands import Lane, SubmittedCommand
 from bunnyland.core.components import WorldClockComponent
 from bunnyland.core.events import DomainEvent, EventVisibility, event_base
 from bunnyland.core.handlers import (
@@ -280,7 +280,7 @@ LAUNCH_FIREWORKS_DEF = ActionDefinition(
     title="Launch fireworks",
     description="Set off a fireworks display in the room you are in.",
     lane=Lane.WORLD,
-    cost=CommandCost(action=1),
+    cost=effort_cost(action=ActionEffort.EXTENDED),
     arguments={},
 )
 

@@ -20,8 +20,8 @@ from bunnyland.core import (
     remove_from_container,
     spawn_entity,
 )
-from bunnyland.core.actions import ActionArgument, ActionDefinition
-from bunnyland.core.commands import CommandCost, Lane, SubmittedCommand
+from bunnyland.core.actions import ActionArgument, ActionDefinition, ActionEffort, effort_cost
+from bunnyland.core.commands import Lane, SubmittedCommand
 from bunnyland.core.ecs import replace_component
 from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
@@ -134,7 +134,7 @@ DECORATE_DEF = ActionDefinition(
     title="Decorate",
     description="Hang a festive decoration in the room you are in.",
     lane=Lane.WORLD,
-    cost=CommandCost(action=1),
+    cost=effort_cost(action=ActionEffort.ROUTINE),
     arguments={
         "kind": ActionArgument(
             title="Kind",

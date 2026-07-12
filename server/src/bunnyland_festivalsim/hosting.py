@@ -30,8 +30,8 @@ from bunnyland.core import (
     ThoughtComponent,
     spawn_entity,
 )
-from bunnyland.core.actions import ActionArgument, ActionDefinition
-from bunnyland.core.commands import CommandCost, Lane, SubmittedCommand
+from bunnyland.core.actions import ActionArgument, ActionDefinition, ActionEffort, effort_cost
+from bunnyland.core.commands import Lane, SubmittedCommand
 from bunnyland.core.ecs import entity_name, parse_entity_id, replace_component
 from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
@@ -423,7 +423,7 @@ HOST_FESTIVAL_DEF = ActionDefinition(
     title="Host festival",
     description="Throw your own festival in the room you are in.",
     lane=Lane.WORLD,
-    cost=CommandCost(action=1),
+    cost=effort_cost(action=ActionEffort.MAJOR),
     arguments={
         "theme": ActionArgument(
             title="Theme",
@@ -438,7 +438,7 @@ ATTEND_FESTIVAL_DEF = ActionDefinition(
     title="Attend festival",
     description="Join a hosted festival in your room.",
     lane=Lane.WORLD,
-    cost=CommandCost(action=1),
+    cost=effort_cost(action=ActionEffort.ROUTINE),
     arguments={
         "festival_id": ActionArgument(
             title="Festival", description="The festival to join.", kind="entity", required=True
@@ -451,7 +451,7 @@ END_FESTIVAL_DEF = ActionDefinition(
     title="End festival",
     description="Wind down a festival you are hosting.",
     lane=Lane.WORLD,
-    cost=CommandCost(action=1),
+    cost=effort_cost(action=ActionEffort.MAJOR),
     arguments={
         "festival_id": ActionArgument(
             title="Festival", description="The festival to end.", kind="entity", required=True

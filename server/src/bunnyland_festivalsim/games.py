@@ -24,8 +24,8 @@ from bunnyland.core import (
     contents,
     spawn_entity,
 )
-from bunnyland.core.actions import ActionArgument, ActionDefinition
-from bunnyland.core.commands import CommandCost, Lane, SubmittedCommand
+from bunnyland.core.actions import ActionArgument, ActionDefinition, ActionEffort, effort_cost
+from bunnyland.core.commands import Lane, SubmittedCommand
 from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
     HandlerContext,
@@ -190,7 +190,7 @@ PLAY_GAME_DEF = ActionDefinition(
     title="Play game",
     description="Try your luck at a fairground game booth in the room.",
     lane=Lane.WORLD,
-    cost=CommandCost(action=1),
+    cost=effort_cost(action=ActionEffort.ROUTINE),
     arguments={
         "booth_id": ActionArgument(
             title="Booth", description="The booth to play.", kind="entity", required=True

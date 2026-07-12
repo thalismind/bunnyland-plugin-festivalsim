@@ -26,8 +26,8 @@ from bunnyland.core import (
     parse_entity_id,
     spawn_entity,
 )
-from bunnyland.core.actions import ActionArgument, ActionDefinition
-from bunnyland.core.commands import CommandCost, Lane, SubmittedCommand
+from bunnyland.core.actions import ActionArgument, ActionDefinition, ActionEffort, effort_cost
+from bunnyland.core.commands import Lane, SubmittedCommand
 from bunnyland.core.ecs import replace_component
 from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
@@ -259,7 +259,7 @@ ENTER_CONTEST_DEF = ActionDefinition(
     title="Enter contest",
     description="Enter a held item into an open contest in the room.",
     lane=Lane.WORLD,
-    cost=CommandCost(action=1),
+    cost=effort_cost(action=ActionEffort.ROUTINE),
     arguments={
         "contest_id": ActionArgument(
             title="Contest", description="The contest to enter.", kind="entity", required=True
@@ -280,7 +280,7 @@ JUDGE_CONTEST_DEF = ActionDefinition(
     title="Judge contest",
     description="Judge an open contest and crown its top entry.",
     lane=Lane.WORLD,
-    cost=CommandCost(action=1),
+    cost=effort_cost(action=ActionEffort.ROUTINE),
     arguments={
         "contest_id": ActionArgument(
             title="Contest", description="The contest to judge.", kind="entity", required=True

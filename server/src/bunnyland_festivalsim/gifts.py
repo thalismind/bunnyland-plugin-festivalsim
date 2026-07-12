@@ -17,8 +17,8 @@ from bunnyland.core import (
     Contains,
     remove_from_container,
 )
-from bunnyland.core.actions import ActionArgument, ActionDefinition
-from bunnyland.core.commands import CommandCost, Lane, SubmittedCommand
+from bunnyland.core.actions import ActionArgument, ActionDefinition, ActionEffort, effort_cost
+from bunnyland.core.commands import Lane, SubmittedCommand
 from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
     HandlerContext,
@@ -122,7 +122,7 @@ GIVE_GIFT_DEF = ActionDefinition(
     title="Give gift",
     description="Give a held item to another character in the room.",
     lane=Lane.WORLD,
-    cost=CommandCost(action=1),
+    cost=effort_cost(action=ActionEffort.ROUTINE),
     arguments={
         "item_id": ActionArgument(
             title="Gift", description="The held item to give.", kind="entity", required=True
