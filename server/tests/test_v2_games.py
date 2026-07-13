@@ -12,6 +12,7 @@ from bunnyland.core import (
 )
 from bunnyland.core.commands import CommandCost, Lane, build_submitted_command
 from bunnyland.core.handlers import HandlerContext
+from conftest import execute_handler
 
 from bunnyland_festivalsim.games import (
     GameBoothComponent,
@@ -84,8 +85,8 @@ def test_play_game_win_awards_a_prize_and_records_the_play():
     player = _character(actor.world, room)
     booth = spawn_booth(actor.world, room_id=room.id, difficulty=0.0, prize="ribbon")
 
-    result = PlayGameHandler().execute(
-        _ctx(actor), _cmd(player.id, "play-game", {"booth_id": str(booth.id)})
+    result = execute_handler(
+        PlayGameHandler(), _ctx(actor), _cmd(player.id, "play-game", {"booth_id": str(booth.id)})
     )
 
     assert result.ok
@@ -108,8 +109,8 @@ def test_play_game_loss_records_a_play_but_no_prize():
     player = _character(actor.world, room)
     booth = spawn_booth(actor.world, room_id=room.id, difficulty=1.0)
 
-    result = PlayGameHandler().execute(
-        _ctx(actor), _cmd(player.id, "play-game", {"booth_id": str(booth.id)})
+    result = execute_handler(
+        PlayGameHandler(), _ctx(actor), _cmd(player.id, "play-game", {"booth_id": str(booth.id)})
     )
 
     assert result.ok
@@ -127,8 +128,8 @@ def test_play_game_second_play_increments_tally():
     booth = spawn_booth(actor.world, room_id=room.id, difficulty=0.0)
     play = _cmd(player.id, "play-game", {"booth_id": str(booth.id)})
 
-    PlayGameHandler().execute(_ctx(actor), play)
-    PlayGameHandler().execute(_ctx(actor), play)
+    execute_handler(PlayGameHandler(), _ctx(actor), play)
+    execute_handler(PlayGameHandler(), _ctx(actor), play)
 
     edge, _target = next(iter(booth.get_relationships(Participates)))
     assert edge.plays == 2
@@ -141,9 +142,11 @@ def test_play_game_tracks_players_independently():
     first = _character(actor.world, room, "Ada")
     second = _character(actor.world, room, "Bea")
     booth = spawn_booth(actor.world, room_id=room.id, difficulty=0.0)
-    PlayGameHandler().execute(_ctx(actor), _cmd(first.id, "play-game", {"booth_id": str(booth.id)}))
-    PlayGameHandler().execute(
-        _ctx(actor), _cmd(second.id, "play-game", {"booth_id": str(booth.id)})
+    execute_handler(
+        PlayGameHandler(), _ctx(actor), _cmd(first.id, "play-game", {"booth_id": str(booth.id)})
+    )
+    execute_handler(
+        PlayGameHandler(), _ctx(actor), _cmd(second.id, "play-game", {"booth_id": str(booth.id)})
     )
     tallies = {target: edge.plays for edge, target in booth.get_relationships(Participates)}
     assert tallies[first.id] == 1
@@ -155,8 +158,8 @@ def test_play_game_tracks_players_independently():
 
 def test_play_game_rejects_invalid_character():
     actor = WorldActor()
-    result = PlayGameHandler().execute(
-        _ctx(actor), _cmd("???", "play-game", {"booth_id": "entity_1"})
+    result = execute_handler(
+        PlayGameHandler(), _ctx(actor), _cmd("???", "play-game", {"booth_id": "entity_1"})
     )
     assert not result.ok
     assert result.reason == "invalid character id"
@@ -166,8 +169,8 @@ def test_play_game_rejects_invalid_booth_id():
     actor = WorldActor()
     room = _room(actor.world)
     player = _character(actor.world, room)
-    result = PlayGameHandler().execute(
-        _ctx(actor), _cmd(player.id, "play-game", {"booth_id": "???"})
+    result = execute_handler(
+        PlayGameHandler(), _ctx(actor), _cmd(player.id, "play-game", {"booth_id": "???"})
     )
     assert not result.ok
     assert result.reason == "invalid booth id"
@@ -177,8 +180,8 @@ def test_play_game_rejects_missing_booth():
     actor = WorldActor()
     room = _room(actor.world)
     player = _character(actor.world, room)
-    result = PlayGameHandler().execute(
-        _ctx(actor), _cmd(player.id, "play-game", {"booth_id": "entity_9999"})
+    result = execute_handler(
+        PlayGameHandler(), _ctx(actor), _cmd(player.id, "play-game", {"booth_id": "entity_9999"})
     )
     assert not result.ok
     assert result.reason == "booth does not exist"
@@ -190,8 +193,8 @@ def test_play_game_rejects_non_booth_target():
     player = _character(actor.world, room)
     crate = spawn_entity(actor.world, [IdentityComponent(name="crate", kind="item")])
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), crate.id)
-    result = PlayGameHandler().execute(
-        _ctx(actor), _cmd(player.id, "play-game", {"booth_id": str(crate.id)})
+    result = execute_handler(
+        PlayGameHandler(), _ctx(actor), _cmd(player.id, "play-game", {"booth_id": str(crate.id)})
     )
     assert not result.ok
     assert result.reason == "that is not a game booth"
@@ -203,8 +206,8 @@ def test_play_game_rejects_booth_in_another_room():
     other = _room(actor.world, title="Hall")
     player = _character(actor.world, room)
     booth = spawn_booth(actor.world, room_id=other.id)
-    result = PlayGameHandler().execute(
-        _ctx(actor), _cmd(player.id, "play-game", {"booth_id": str(booth.id)})
+    result = execute_handler(
+        PlayGameHandler(), _ctx(actor), _cmd(player.id, "play-game", {"booth_id": str(booth.id)})
     )
     assert not result.ok
     assert result.reason == "that booth is not here"

@@ -13,6 +13,7 @@ from bunnyland.core import (
 )
 from bunnyland.core.commands import CommandCost, Lane, build_submitted_command
 from bunnyland.core.handlers import HandlerContext
+from conftest import execute_handler
 
 from bunnyland_festivalsim import (
     DecorateHandler,
@@ -75,7 +76,7 @@ def test_decorate_spawns_a_decoration_in_the_room():
     room = _room(actor.world)
     character = _character(actor.world, room)
 
-    result = DecorateHandler().execute(_ctx(actor), _cmd(character.id, {"kind": "banner"}))
+    result = execute_handler(DecorateHandler(), _ctx(actor), _cmd(character.id, {"kind": "banner"}))
 
     assert result.ok
     assert isinstance(result.events[0], RoomDecoratedEvent)
@@ -90,7 +91,7 @@ def test_decorate_defaults_to_a_lantern():
     room = _room(actor.world)
     character = _character(actor.world, room)
 
-    result = DecorateHandler().execute(_ctx(actor), _cmd(character.id, {}))
+    result = execute_handler(DecorateHandler(), _ctx(actor), _cmd(character.id, {}))
 
     assert result.ok
     decoration = _decorations_in(actor.world, room)[0]
@@ -106,8 +107,10 @@ def test_decorate_hangs_a_held_item():
     )
     _hold(character, item)
 
-    result = DecorateHandler().execute(
-        _ctx(actor), _cmd(character.id, {"kind": "garland", "item_id": str(item.id)})
+    result = execute_handler(
+        DecorateHandler(),
+        _ctx(actor),
+        _cmd(character.id, {"kind": "garland", "item_id": str(item.id)}),
     )
 
     assert result.ok
@@ -119,14 +122,14 @@ def test_decorate_hangs_a_held_item():
 
 def test_decorate_rejects_invalid_character():
     actor = WorldActor()
-    result = DecorateHandler().execute(_ctx(actor), _cmd("???", {}))
+    result = execute_handler(DecorateHandler(), _ctx(actor), _cmd("???", {}))
     assert not result.ok
     assert result.reason == "invalid character id"
 
 
 def test_decorate_rejects_missing_character():
     actor = WorldActor()
-    result = DecorateHandler().execute(_ctx(actor), _cmd("entity_9999", {}))
+    result = execute_handler(DecorateHandler(), _ctx(actor), _cmd("entity_9999", {}))
     assert not result.ok
     assert result.reason == "character does not exist"
 
@@ -136,7 +139,7 @@ def test_decorate_rejects_character_without_a_room():
     character = spawn_entity(
         actor.world, [IdentityComponent(name="drifter", kind="character"), CharacterComponent()]
     )
-    result = DecorateHandler().execute(_ctx(actor), _cmd(character.id, {}))
+    result = execute_handler(DecorateHandler(), _ctx(actor), _cmd(character.id, {}))
     assert not result.ok
     assert result.reason == "you are not in a room"
 
@@ -145,7 +148,7 @@ def test_decorate_rejects_invalid_item():
     actor = WorldActor()
     room = _room(actor.world)
     character = _character(actor.world, room)
-    result = DecorateHandler().execute(_ctx(actor), _cmd(character.id, {"item_id": "???"}))
+    result = execute_handler(DecorateHandler(), _ctx(actor), _cmd(character.id, {"item_id": "???"}))
     assert not result.ok
     assert result.reason == "invalid item id"
 
@@ -154,7 +157,9 @@ def test_decorate_rejects_missing_item():
     actor = WorldActor()
     room = _room(actor.world)
     character = _character(actor.world, room)
-    result = DecorateHandler().execute(_ctx(actor), _cmd(character.id, {"item_id": "entity_9999"}))
+    result = execute_handler(
+        DecorateHandler(), _ctx(actor), _cmd(character.id, {"item_id": "entity_9999"})
+    )
     assert not result.ok
     assert result.reason == "item does not exist"
 
@@ -168,7 +173,9 @@ def test_decorate_rejects_unheld_item():
     )
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), item.id)  # on the floor
 
-    result = DecorateHandler().execute(_ctx(actor), _cmd(character.id, {"item_id": str(item.id)}))
+    result = execute_handler(
+        DecorateHandler(), _ctx(actor), _cmd(character.id, {"item_id": str(item.id)})
+    )
 
     assert not result.ok
     assert result.reason == "you are not holding that item"

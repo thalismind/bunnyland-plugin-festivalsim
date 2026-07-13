@@ -28,16 +28,16 @@ from bunnyland.core import (
 )
 from bunnyland.core.actions import ActionArgument, ActionDefinition, ActionEffort, effort_cost
 from bunnyland.core.commands import Lane, SubmittedCommand
-from bunnyland.core.ecs import replace_component
 from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
     HandlerContext,
     HandlerResult,
-    ok,
+    planned,
     rejected,
     require_character,
     require_entity,
 )
+from bunnyland.core.mutations import AddEdge, AddEntity, EntityReference, MutationPlan, SetComponent
 from bunnyland.prompts.context import ComponentPromptContext
 from pydantic.dataclasses import dataclass
 from relics import Component, Edge, Entity, World
@@ -174,15 +174,20 @@ class EnterContestHandler:
         if _has_entry(contest, entry_id):
             return rejected("that entry is already in the contest")
         score = float(command.payload.get("score", 1.0))
-        register_contest_entry(
-            ctx.world,
-            contest,
-            entry_id,
-            entrant_id=str(character_id),
-            score=score,
-            epoch=ctx.epoch,
-        )
-        return ok(
+        return planned(
+            MutationPlan(
+                (
+                    AddEdge(
+                        contest.id,
+                        entry_id,
+                        ContestEntry(
+                            entrant_id=str(character_id),
+                            score=score,
+                            entered_at_epoch=ctx.epoch,
+                        ),
+                    ),
+                )
+            ),
             ContestEnteredEvent(
                 **ctx.event_base(
                     visibility=EventVisibility.ROOM,
@@ -193,7 +198,7 @@ class EnterContestHandler:
                     entrant_id=str(character_id),
                     entry_id=str(entry_id),
                 )
-            )
+            ),
         )
 
 
@@ -216,9 +221,44 @@ class JudgeContestHandler:
         winner_id = winning_edge.entrant_id
 
         component = contest.get_component(ContestComponent)
-        replace_component(contest, replace(component, is_open=False, winner_id=winner_id))
-        self._award(ctx.world, winner_id)
-        return ok(
+        operations = [
+            SetComponent(
+                contest.id,
+                replace(component, is_open=False, winner_id=winner_id),
+            )
+        ]
+        parsed_winner = parse_entity_id(winner_id)
+        if parsed_winner is not None and ctx.world.has_entity(parsed_winner):
+            winner = ctx.world.get_entity(parsed_winner)
+            trophy_ref = EntityReference()
+            current = (
+                winner.get_component(ReputationComponent)
+                if winner.has_component(ReputationComponent)
+                else ReputationComponent()
+            )
+            operations.extend(
+                (
+                    AddEntity(
+                        (
+                            IdentityComponent(name="trophy", kind="item", tags=("festivalsim",)),
+                            PortableComponent(),
+                            HoldableComponent(slot="hand"),
+                        ),
+                        reference=trophy_ref,
+                    ),
+                    AddEdge(
+                        parsed_winner,
+                        trophy_ref,
+                        Contains(mode=ContainmentMode.INVENTORY),
+                    ),
+                    SetComponent(
+                        parsed_winner,
+                        replace(current, score=current.score + WIN_REPUTATION),
+                    ),
+                )
+            )
+        return planned(
+            MutationPlan(tuple(operations)),
             ContestJudgedEvent(
                 **ctx.event_base(
                     visibility=EventVisibility.ROOM,
@@ -229,29 +269,8 @@ class JudgeContestHandler:
                     winner_id=str(winner_id),
                     entry_id=str(winning_entry_id),
                 )
-            )
+            ),
         )
-
-    def _award(self, world: World, winner_id: str) -> None:
-        parsed = parse_entity_id(winner_id)
-        if parsed is None or not world.has_entity(parsed):
-            return
-        winner = world.get_entity(parsed)
-        trophy = spawn_entity(
-            world,
-            [
-                IdentityComponent(name="trophy", kind="item", tags=("festivalsim",)),
-                PortableComponent(),
-                HoldableComponent(slot="hand"),
-            ],
-        )
-        winner.add_relationship(Contains(mode=ContainmentMode.INVENTORY), trophy.id)
-        current = (
-            winner.get_component(ReputationComponent)
-            if winner.has_component(ReputationComponent)
-            else ReputationComponent()
-        )
-        replace_component(winner, replace(current, score=current.score + WIN_REPUTATION))
 
 
 ENTER_CONTEST_DEF = ActionDefinition(

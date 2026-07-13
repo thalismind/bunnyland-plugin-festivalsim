@@ -37,13 +37,26 @@ from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
     HandlerContext,
     HandlerResult,
-    ok,
+    planned,
     rejected,
     require_character,
     require_entity,
 )
-from bunnyland.foundation.history.mechanics import record_world_history
-from bunnyland.foundation.social.mechanics import adjust_bond
+from bunnyland.core.mutations import (
+    AddEdge,
+    AddEntity,
+    EntityReference,
+    MutationPlan,
+    SetComponent,
+    SetComponentFactory,
+)
+from bunnyland.foundation.history.mechanics import (
+    HistoryActor,
+    HistoryTarget,
+    WorldHistoryRecordComponent,
+    record_world_history,
+)
+from bunnyland.foundation.social.mechanics import adjusted_bond
 from bunnyland.foundation.storyteller.mechanics import (
     IncidentComponent,
     IncidentResolvedEvent,
@@ -209,57 +222,175 @@ class HostFestivalHandler:
             return rejected("you are already hosting a festival")
         theme = str(command.payload.get("theme", "revel"))
 
-        incident = _register_incident(ctx.world, room, ctx.epoch)
-        festival = spawn_entity(
-            ctx.world,
-            [
-                IdentityComponent(name=f"{theme} festival", kind="festival", tags=("festivalsim",)),
-                HostedFestivalComponent(
+        incident_ref = EntityReference()
+        festival_ref = EntityReference()
+        history_ref = EntityReference()
+        hosted_cache: list[FestivalHostedEvent] = []
+
+        def hosted_event() -> FestivalHostedEvent:
+            if not hosted_cache:
+                hosted_cache.append(
+                    FestivalHostedEvent(
+                        **ctx.event_base(
+                            visibility=EventVisibility.ROOM,
+                            actor_id=str(host_id),
+                            room_id=str(room.id),
+                            target_ids=(
+                                str(festival_ref.require()),
+                                str(incident_ref.require()),
+                            ),
+                            festival_id=str(festival_ref.require()),
+                            host_id=str(host_id),
+                            theme=theme,
+                            incident_id=str(incident_ref.require()),
+                        )
+                    )
+                )
+            return hosted_cache[0]
+
+        where = (
+            room.get_component(IdentityComponent).name
+            if room.has_component(IdentityComponent)
+            else "the square"
+        )
+        summary = f"{entity_name(host, fallback='someone')} hosted a festival in {where}."
+        operations = [
+            AddEntity(
+                (
+                    IdentityComponent(name="festival", kind="incident", tags=("festivalsim",)),
+                    IncidentComponent(
+                        kind=FESTIVAL_INCIDENT_KIND,
+                        budget_spent=0.0,
+                        started_at_epoch=ctx.epoch,
+                        room_id=str(room.id),
+                    ),
+                ),
+                reference=incident_ref,
+            ),
+            AddEdge(
+                room.id,
+                incident_ref,
+                Contains(mode=ContainmentMode.ROOM_CONTENT),
+            ),
+            AddEntity(
+                (
+                    IdentityComponent(
+                        name=f"{theme} festival",
+                        kind="festival",
+                        tags=("festivalsim",),
+                    ),
+                    HostedFestivalComponent(
+                        key="hosted",
+                        name=f"{theme} festival",
+                        theme=theme,
+                        host_id=str(host_id),
+                        incident_id="$pending",
+                        mood_lift=HOSTED_MOOD_LIFT,
+                        opened_day=ctx.epoch,
+                    ),
+                ),
+                reference=festival_ref,
+            ),
+            SetComponentFactory(
+                festival_ref,
+                HostedFestivalComponent,
+                lambda: HostedFestivalComponent(
                     key="hosted",
                     name=f"{theme} festival",
                     theme=theme,
                     host_id=str(host_id),
-                    incident_id=str(incident.id),
+                    incident_id=str(incident_ref.require()),
                     mood_lift=HOSTED_MOOD_LIFT,
                     opened_day=ctx.epoch,
                 ),
-            ],
+            ),
+            AddEdge(
+                room.id,
+                festival_ref,
+                Contains(mode=ContainmentMode.ROOM_CONTENT),
+            ),
+            AddEdge(host_id, festival_ref, Hosts(theme=theme, opened_epoch=ctx.epoch)),
+        ]
+        thought_ref = EntityReference()
+        operations.extend(
+            (
+                AddEntity(
+                    (
+                        ThoughtComponent(
+                            label="festive",
+                            text="What a wonderful party this is.",
+                            affect_delta=ATTEND_JOY,
+                            created_at_epoch=ctx.epoch,
+                            expires_at_epoch=ctx.epoch + _JOY_TTL_SECONDS,
+                        ),
+                    ),
+                    reference=thought_ref,
+                ),
+                SetComponentFactory(
+                    thought_ref,
+                    ThoughtComponent,
+                    lambda: ThoughtComponent(
+                        label="festive",
+                        text="What a wonderful party this is.",
+                        affect_delta=ATTEND_JOY,
+                        created_at_epoch=ctx.epoch,
+                        expires_at_epoch=ctx.epoch + _JOY_TTL_SECONDS,
+                        source_event_id=hosted_event().event_id,
+                    ),
+                ),
+                AddEdge(host_id, thought_ref, HasThought()),
+                AddEntity(
+                    (
+                        IdentityComponent(name=f"History: {summary}", kind="history"),
+                        WorldHistoryRecordComponent(
+                            summary=summary,
+                            source_event_id="pending",
+                            event_type="FestivalHostedEvent",
+                            created_at_epoch=ctx.epoch,
+                            location_id=str(room.id),
+                            tags=("festival", "celebration"),
+                            salience=0.9,
+                        ),
+                        ImageRequestComponent(
+                            purpose=ImagePurpose.EVENT.value,
+                            requested_at_epoch=ctx.epoch,
+                            requested_by=str(host_id),
+                        ),
+                    ),
+                    reference=history_ref,
+                ),
+                SetComponentFactory(
+                    history_ref,
+                    WorldHistoryRecordComponent,
+                    lambda: WorldHistoryRecordComponent(
+                        summary=summary,
+                        source_event_id=hosted_event().event_id,
+                        event_type="FestivalHostedEvent",
+                        created_at_epoch=ctx.epoch,
+                        location_id=str(room.id),
+                        tags=("festival", "celebration"),
+                        salience=0.9,
+                    ),
+                ),
+                AddEdge(history_ref, host_id, HistoryActor()),
+                AddEdge(history_ref, festival_ref, HistoryTarget()),
+            )
         )
-        room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), festival.id)
-        host.add_relationship(Hosts(theme=theme, opened_epoch=ctx.epoch), festival.id)
 
-        hosted = FestivalHostedEvent(
-            **ctx.event_base(
-                visibility=EventVisibility.ROOM,
-                actor_id=str(host_id),
-                room_id=str(room.id),
-                target_ids=(str(festival.id), str(incident.id)),
-                festival_id=str(festival.id),
-                host_id=str(host_id),
-                theme=theme,
-                incident_id=str(incident.id),
+        def started_event() -> IncidentStartedEvent:
+            return IncidentStartedEvent(
+                **ctx.event_base(
+                    visibility=EventVisibility.ROOM,
+                    actor_id=str(host_id),
+                    room_id=str(room.id),
+                    target_ids=(str(incident_ref.require()),),
+                    incident_id=str(incident_ref.require()),
+                    kind=FESTIVAL_INCIDENT_KIND,
+                    room_id_started=str(room.id),
+                )
             )
-        )
-        _remember_the_night(
-            ctx.world,
-            host=host,
-            festival=festival,
-            room=room,
-            event_id=hosted.event_id,
-            epoch=ctx.epoch,
-        )
-        started = IncidentStartedEvent(
-            **ctx.event_base(
-                visibility=EventVisibility.ROOM,
-                actor_id=str(host_id),
-                room_id=str(room.id),
-                target_ids=(str(incident.id),),
-                incident_id=str(incident.id),
-                kind=FESTIVAL_INCIDENT_KIND,
-                room_id_started=str(room.id),
-            )
-        )
-        return ok(hosted, started)
+
+        return planned(MutationPlan(tuple(operations)), hosted_event, started_event)
 
 
 class AttendFestivalHandler:
@@ -293,14 +424,44 @@ class AttendFestivalHandler:
         if any(target == festival_id for _edge, target in guest.get_relationships(AttendsFestival)):
             return rejected("you are already at that festival")
 
-        guest.add_relationship(AttendsFestival(joined_epoch=ctx.epoch), festival_id)
+        operations = [AddEdge(guest_id, festival_id, AttendsFestival(joined_epoch=ctx.epoch))]
         host_entity_id = parse_entity_id(component.host_id)
         if host_entity_id is not None and ctx.world.has_entity(host_entity_id):
             deltas = {"affinity": ATTEND_AFFINITY, "familiarity": ATTEND_FAMILIARITY}
-            adjust_bond(ctx.world, guest_id, host_entity_id, deltas)
-            adjust_bond(ctx.world, host_entity_id, guest_id, deltas)
-        _lift_joy(ctx.world, guest, ctx.epoch)
-        return ok(
+            operations.extend(
+                (
+                    AddEdge(
+                        guest_id,
+                        host_entity_id,
+                        adjusted_bond(ctx.world, guest_id, host_entity_id, deltas),
+                    ),
+                    AddEdge(
+                        host_entity_id,
+                        guest_id,
+                        adjusted_bond(ctx.world, host_entity_id, guest_id, deltas),
+                    ),
+                )
+            )
+        thought_ref = EntityReference()
+        operations.extend(
+            (
+                AddEntity(
+                    (
+                        ThoughtComponent(
+                            label="festive",
+                            text="What a wonderful party this is.",
+                            affect_delta=ATTEND_JOY,
+                            created_at_epoch=ctx.epoch,
+                            expires_at_epoch=ctx.epoch + _JOY_TTL_SECONDS,
+                        ),
+                    ),
+                    reference=thought_ref,
+                ),
+                AddEdge(guest_id, thought_ref, HasThought()),
+            )
+        )
+        return planned(
+            MutationPlan(tuple(operations)),
             FestivalAttendedEvent(
                 **ctx.event_base(
                     visibility=EventVisibility.ROOM,
@@ -311,7 +472,7 @@ class AttendFestivalHandler:
                     attendee_id=str(guest_id),
                     host_id=component.host_id,
                 )
-            )
+            ),
         )
 
 
@@ -340,11 +501,31 @@ class EndFestivalHandler:
         if component.host_id != str(host_id):
             return rejected("only the host can end that festival")
 
-        replace_component(festival, replace(component, ended=True))
+        operations = [SetComponent(festival_id, replace(component, ended=True))]
         events: list[DomainEvent] = []
-        resolved = _resolve_incident(ctx, component.incident_id, host_id)
-        if resolved is not None:
-            events.append(resolved)
+        parsed_incident = parse_entity_id(component.incident_id)
+        if parsed_incident is not None and ctx.world.has_entity(parsed_incident):
+            incident_entity = ctx.world.get_entity(parsed_incident)
+            if incident_entity.has_component(IncidentComponent):
+                incident = incident_entity.get_component(IncidentComponent)
+                operations.append(
+                    SetComponent(
+                        parsed_incident,
+                        replace(incident, resolved_at_epoch=ctx.epoch),
+                    )
+                )
+                events.append(
+                    IncidentResolvedEvent(
+                        **ctx.event_base(
+                            visibility=EventVisibility.ROOM,
+                            actor_id=str(host_id),
+                            room_id=incident.room_id,
+                            target_ids=(str(parsed_incident),),
+                            incident_id=str(parsed_incident),
+                            kind=incident.kind,
+                        )
+                    )
+                )
         events.append(
             FestivalEndedEvent(
                 **ctx.event_base(
@@ -358,7 +539,7 @@ class EndFestivalHandler:
                 )
             )
         )
-        return ok(*events)
+        return planned(MutationPlan(tuple(operations)), *events)
 
 
 def _resolve_incident(

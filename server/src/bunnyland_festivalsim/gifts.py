@@ -15,7 +15,6 @@ from bunnyland.core import (
     CharacterComponent,
     ContainmentMode,
     Contains,
-    remove_from_container,
 )
 from bunnyland.core.actions import ActionArgument, ActionDefinition, ActionEffort, effort_cost
 from bunnyland.core.commands import Lane, SubmittedCommand
@@ -23,12 +22,13 @@ from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
     HandlerContext,
     HandlerResult,
-    ok,
+    planned,
     rejected,
     require_character,
     require_entity,
 )
-from bunnyland.foundation.social.mechanics import adjust_bond
+from bunnyland.core.mutations import AddEdge, MutationPlan, RemoveEdge
+from bunnyland.foundation.social.mechanics import adjusted_bond
 
 from .calendar import active_festival
 from .spatial import holder_of, room_of
@@ -87,9 +87,6 @@ class GiveGiftHandler:
         if giver_room is None or recipient_room is None or giver_room.id != recipient_room.id:
             return rejected("they are not here")
 
-        remove_from_container(ctx.world, item_id)
-        recipient.add_relationship(Contains(mode=ContainmentMode.INVENTORY), item_id)
-
         festival = active_festival(ctx.world)
         deltas = {"affinity": GIFT_AFFINITY, "familiarity": GIFT_FAMILIARITY}
         if festival is not None:
@@ -98,10 +95,27 @@ class GiveGiftHandler:
                 "familiarity": GIFT_FAMILIARITY,
                 "trust": FESTIVAL_TRUST_BONUS,
             }
-        adjust_bond(ctx.world, giver_id, recipient_id, deltas)
-        adjust_bond(ctx.world, recipient_id, giver_id, deltas)
-
-        return ok(
+        return planned(
+            MutationPlan(
+                (
+                    RemoveEdge(holder.id, item_id, Contains),
+                    AddEdge(
+                        recipient_id,
+                        item_id,
+                        Contains(mode=ContainmentMode.INVENTORY),
+                    ),
+                    AddEdge(
+                        giver_id,
+                        recipient_id,
+                        adjusted_bond(ctx.world, giver_id, recipient_id, deltas),
+                    ),
+                    AddEdge(
+                        recipient_id,
+                        giver_id,
+                        adjusted_bond(ctx.world, recipient_id, giver_id, deltas),
+                    ),
+                )
+            ),
             GiftGivenEvent(
                 **ctx.event_base(
                     visibility=EventVisibility.ROOM,
@@ -113,7 +127,7 @@ class GiveGiftHandler:
                     gift_id=str(item_id),
                     festival_key=festival.key if festival is not None else "",
                 )
-            )
+            ),
         )
 
 

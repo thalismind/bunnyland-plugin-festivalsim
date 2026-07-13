@@ -17,20 +17,26 @@ from bunnyland.core import (
     Contains,
     IdentityComponent,
     contents,
-    remove_from_container,
     spawn_entity,
 )
 from bunnyland.core.actions import ActionArgument, ActionDefinition, ActionEffort, effort_cost
 from bunnyland.core.commands import Lane, SubmittedCommand
-from bunnyland.core.ecs import replace_component
 from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
     HandlerContext,
     HandlerResult,
-    ok,
+    planned,
     rejected,
     require_character,
     require_entity,
+)
+from bunnyland.core.mutations import (
+    AddEdge,
+    AddEntity,
+    EntityReference,
+    MutationPlan,
+    RemoveEdge,
+    SetComponent,
 )
 from bunnyland.prompts.context import ComponentPromptContext
 from relics import Entity, World
@@ -107,25 +113,46 @@ class DecorateHandler:
             holder = holder_of(ctx.world, item_id)
             if holder is None or holder.id != character_id:
                 return rejected("you are not holding that item")
-            remove_from_container(ctx.world, item_id)
-            replace_component(item, DecorationComponent(kind=kind))
-            _link_into_room(ctx.world, item, room.id)
-            decoration = item
+            decoration_id = item_id
+            operations = [
+                RemoveEdge(holder.id, item_id, Contains),
+                SetComponent(item_id, DecorationComponent(kind=kind)),
+                AddEdge(
+                    room.id,
+                    item_id,
+                    Contains(mode=ContainmentMode.ROOM_CONTENT),
+                ),
+            ]
         else:
-            decoration = spawn_decoration(ctx.world, room_id=room.id, kind=kind)
+            decoration_id = EntityReference()
+            operations = [
+                AddEntity(
+                    (
+                        IdentityComponent(name=kind, kind="decoration", tags=("festivalsim",)),
+                        DecorationComponent(kind=kind),
+                    ),
+                    reference=decoration_id,
+                ),
+                AddEdge(
+                    room.id,
+                    decoration_id,
+                    Contains(mode=ContainmentMode.ROOM_CONTENT),
+                ),
+            ]
 
-        return ok(
-            RoomDecoratedEvent(
+        return planned(
+            MutationPlan(tuple(operations)),
+            lambda: RoomDecoratedEvent(
                 **ctx.event_base(
                     visibility=EventVisibility.ROOM,
                     actor_id=str(character_id),
                     room_id=str(room.id),
-                    target_ids=(str(decoration.id),),
+                    target_ids=(str(decoration_id),),
                     room_id_decorated=str(room.id),
-                    decoration_id=str(decoration.id),
+                    decoration_id=str(decoration_id),
                     kind=kind,
                 )
-            )
+            ),
         )
 
 

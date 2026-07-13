@@ -15,6 +15,7 @@ from bunnyland.core.commands import CommandCost, Lane, build_submitted_command
 from bunnyland.core.ecs import replace_component
 from bunnyland.core.handlers import HandlerContext
 from bunnyland.foundation.social.mechanics import bond_between
+from conftest import execute_handler
 
 from bunnyland_festivalsim import GiftGivenEvent, GiveGiftHandler
 from bunnyland_festivalsim.components import FestivalComponent
@@ -72,7 +73,8 @@ def test_give_gift_transfers_item_and_warms_bond():
     receiver = _character(actor.world, room, "Kell")
     pie = _gift(actor.world, giver)
 
-    result = GiveGiftHandler().execute(
+    result = execute_handler(
+        GiveGiftHandler(),
         _ctx(actor),
         _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": str(receiver.id)}),
     )
@@ -93,7 +95,8 @@ def test_gift_during_festival_warms_bond_more():
     _open_festival(actor)
     pie = _gift(actor.world, giver)
 
-    result = GiveGiftHandler().execute(
+    result = execute_handler(
+        GiveGiftHandler(),
         _ctx(actor),
         _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": str(receiver.id)}),
     )
@@ -106,8 +109,10 @@ def test_gift_during_festival_warms_bond_more():
 
 def test_give_gift_rejects_invalid_giver():
     actor = WorldActor()
-    result = GiveGiftHandler().execute(
-        _ctx(actor), _cmd("???", {"item_id": "entity_1", "recipient_id": "entity_2"})
+    result = execute_handler(
+        GiveGiftHandler(),
+        _ctx(actor),
+        _cmd("???", {"item_id": "entity_1", "recipient_id": "entity_2"}),
     )
     assert not result.ok
     assert result.reason == "invalid character id"
@@ -115,8 +120,10 @@ def test_give_gift_rejects_invalid_giver():
 
 def test_give_gift_rejects_missing_giver():
     actor = WorldActor()
-    result = GiveGiftHandler().execute(
-        _ctx(actor), _cmd("entity_9999", {"item_id": "entity_1", "recipient_id": "entity_2"})
+    result = execute_handler(
+        GiveGiftHandler(),
+        _ctx(actor),
+        _cmd("entity_9999", {"item_id": "entity_1", "recipient_id": "entity_2"}),
     )
     assert not result.ok
     assert result.reason == "character does not exist"
@@ -126,8 +133,10 @@ def test_give_gift_rejects_invalid_item():
     actor = WorldActor()
     room = _room(actor.world)
     giver = _character(actor.world, room)
-    result = GiveGiftHandler().execute(
-        _ctx(actor), _cmd(giver.id, {"item_id": "???", "recipient_id": "entity_2"})
+    result = execute_handler(
+        GiveGiftHandler(),
+        _ctx(actor),
+        _cmd(giver.id, {"item_id": "???", "recipient_id": "entity_2"}),
     )
     assert not result.ok
     assert result.reason == "invalid item id"
@@ -137,8 +146,10 @@ def test_give_gift_rejects_missing_item():
     actor = WorldActor()
     room = _room(actor.world)
     giver = _character(actor.world, room)
-    result = GiveGiftHandler().execute(
-        _ctx(actor), _cmd(giver.id, {"item_id": "entity_9999", "recipient_id": "entity_2"})
+    result = execute_handler(
+        GiveGiftHandler(),
+        _ctx(actor),
+        _cmd(giver.id, {"item_id": "entity_9999", "recipient_id": "entity_2"}),
     )
     assert not result.ok
     assert result.reason == "item does not exist"
@@ -154,7 +165,8 @@ def test_give_gift_rejects_unheld_item():
     )
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), loose.id)
 
-    result = GiveGiftHandler().execute(
+    result = execute_handler(
+        GiveGiftHandler(),
         _ctx(actor),
         _cmd(giver.id, {"item_id": str(loose.id), "recipient_id": str(receiver.id)}),
     )
@@ -168,8 +180,10 @@ def test_give_gift_rejects_invalid_recipient():
     room = _room(actor.world)
     giver = _character(actor.world, room)
     pie = _gift(actor.world, giver)
-    result = GiveGiftHandler().execute(
-        _ctx(actor), _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": "???"})
+    result = execute_handler(
+        GiveGiftHandler(),
+        _ctx(actor),
+        _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": "???"}),
     )
     assert not result.ok
     assert result.reason == "invalid recipient id"
@@ -180,8 +194,10 @@ def test_give_gift_rejects_missing_recipient():
     room = _room(actor.world)
     giver = _character(actor.world, room)
     pie = _gift(actor.world, giver)
-    result = GiveGiftHandler().execute(
-        _ctx(actor), _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": "entity_9999"})
+    result = execute_handler(
+        GiveGiftHandler(),
+        _ctx(actor),
+        _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": "entity_9999"}),
     )
     assert not result.ok
     assert result.reason == "recipient does not exist"
@@ -195,8 +211,10 @@ def test_give_gift_rejects_non_character_recipient():
     crate = spawn_entity(actor.world, [IdentityComponent(name="crate", kind="item")])
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), crate.id)
 
-    result = GiveGiftHandler().execute(
-        _ctx(actor), _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": str(crate.id)})
+    result = execute_handler(
+        GiveGiftHandler(),
+        _ctx(actor),
+        _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": str(crate.id)}),
     )
 
     assert not result.ok
@@ -209,8 +227,10 @@ def test_give_gift_rejects_self_gift():
     giver = _character(actor.world, room)
     pie = _gift(actor.world, giver)
 
-    result = GiveGiftHandler().execute(
-        _ctx(actor), _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": str(giver.id)})
+    result = execute_handler(
+        GiveGiftHandler(),
+        _ctx(actor),
+        _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": str(giver.id)}),
     )
 
     assert not result.ok
@@ -225,7 +245,8 @@ def test_give_gift_rejects_recipient_in_another_room():
     receiver = _character(actor.world, other, "Kell")
     pie = _gift(actor.world, giver)
 
-    result = GiveGiftHandler().execute(
+    result = execute_handler(
+        GiveGiftHandler(),
         _ctx(actor),
         _cmd(giver.id, {"item_id": str(pie.id), "recipient_id": str(receiver.id)}),
     )

@@ -17,6 +17,7 @@ from bunnyland.core.components import WorldClockComponent
 from bunnyland.core.handlers import HandlerContext
 from bunnyland.foundation.history.mechanics import WorldHistoryRecordComponent
 from bunnyland.imagegen import ImageRequestComponent
+from conftest import execute_handler
 
 from bunnyland_festivalsim.hosting import HostedFestivalComponent
 from bunnyland_festivalsim.spectacle import (
@@ -107,8 +108,8 @@ def test_launch_fireworks_dazzles_the_room_and_records_history():
     crate = spawn_entity(actor.world, [IdentityComponent(name="crate", kind="item")])
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), crate.id)
 
-    result = LaunchFireworksHandler().execute(
-        _ctx(actor), _cmd(launcher.id, "launch-fireworks", {})
+    result = execute_handler(
+        LaunchFireworksHandler(), _ctx(actor), _cmd(launcher.id, "launch-fireworks", {})
     )
 
     assert result.ok
@@ -125,7 +126,9 @@ def test_launch_fireworks_dazzles_the_room_and_records_history():
 
 def test_launch_fireworks_rejects_invalid_character():
     actor = WorldActor()
-    result = LaunchFireworksHandler().execute(_ctx(actor), _cmd("???", "launch-fireworks", {}))
+    result = execute_handler(
+        LaunchFireworksHandler(), _ctx(actor), _cmd("???", "launch-fireworks", {})
+    )
     assert not result.ok
     assert result.reason == "invalid character id"
 
@@ -136,7 +139,9 @@ def test_launch_fireworks_rejects_when_not_in_a_room():
         actor.world,
         [IdentityComponent(name="Pyro", kind="character"), CharacterComponent()],
     )
-    result = LaunchFireworksHandler().execute(_ctx(actor), _cmd(loose.id, "launch-fireworks", {}))
+    result = execute_handler(
+        LaunchFireworksHandler(), _ctx(actor), _cmd(loose.id, "launch-fireworks", {})
+    )
     assert not result.ok
     assert result.reason == "you are not in a room"
 

@@ -30,11 +30,12 @@ from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
     HandlerContext,
     HandlerResult,
-    ok,
+    planned,
     rejected,
     require_character,
     require_entity,
 )
+from bunnyland.core.mutations import AddEdge, AddEntity, EntityReference, MutationPlan
 from bunnyland.prompts.context import ComponentPromptContext
 from pydantic.dataclasses import dataclass
 from relics import Component, Edge, Entity, World
@@ -142,10 +143,46 @@ class PlayGameHandler:
             plays=plays + 1,
             wins=(prior.wins if prior is not None else 0) + (1 if won else 0),
         )
-        booth.add_relationship(edge, player_id)
+        operations = [AddEdge(booth_id, player_id, edge)]
         if won:
-            self._award(ctx.world, player, component.prize, ctx.epoch)
-        return ok(
+            token_ref = EntityReference()
+            thought_ref = EntityReference()
+            operations.extend(
+                (
+                    AddEntity(
+                        (
+                            IdentityComponent(
+                                name=component.prize,
+                                kind="item",
+                                tags=("festivalsim", "prize"),
+                            ),
+                            PortableComponent(),
+                            HoldableComponent(slot="hand"),
+                        ),
+                        reference=token_ref,
+                    ),
+                    AddEdge(
+                        player_id,
+                        token_ref,
+                        Contains(mode=ContainmentMode.INVENTORY),
+                    ),
+                    AddEntity(
+                        (
+                            ThoughtComponent(
+                                label="triumph",
+                                text=f"I won a {component.prize}!",
+                                affect_delta=WIN_JOY,
+                                created_at_epoch=ctx.epoch,
+                                expires_at_epoch=ctx.epoch + _JOY_TTL_SECONDS,
+                            ),
+                        ),
+                        reference=thought_ref,
+                    ),
+                    AddEdge(player_id, thought_ref, HasThought()),
+                )
+            )
+        return planned(
+            MutationPlan(tuple(operations)),
             GamePlayedEvent(
                 **ctx.event_base(
                     visibility=EventVisibility.ROOM,
@@ -157,32 +194,8 @@ class PlayGameHandler:
                     game=component.game,
                     won=won,
                 )
-            )
+            ),
         )
-
-    def _award(self, world: World, player: Entity, prize: str, epoch: int) -> None:
-        token = spawn_entity(
-            world,
-            [
-                IdentityComponent(name=prize, kind="item", tags=("festivalsim", "prize")),
-                PortableComponent(),
-                HoldableComponent(slot="hand"),
-            ],
-        )
-        player.add_relationship(Contains(mode=ContainmentMode.INVENTORY), token.id)
-        thought = spawn_entity(
-            world,
-            [
-                ThoughtComponent(
-                    label="triumph",
-                    text=f"I won a {prize}!",
-                    affect_delta=WIN_JOY,
-                    created_at_epoch=epoch,
-                    expires_at_epoch=epoch + _JOY_TTL_SECONDS,
-                )
-            ],
-        )
-        player.add_relationship(HasThought(), thought.id)
 
 
 PLAY_GAME_DEF = ActionDefinition(

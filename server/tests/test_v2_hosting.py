@@ -22,6 +22,7 @@ from bunnyland.foundation.storyteller.mechanics import (
     IncidentStartedEvent,
 )
 from bunnyland.imagegen import ImageRequestComponent
+from conftest import execute_handler
 
 from bunnyland_festivalsim.hosting import (
     AttendFestivalHandler,
@@ -75,8 +76,8 @@ def _ctx(actor):
 
 
 def _host_a_festival(actor, room, host, theme="revel"):
-    result = HostFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "host-festival", {"theme": theme})
+    result = execute_handler(
+        HostFestivalHandler(), _ctx(actor), _cmd(host.id, "host-festival", {"theme": theme})
     )
     festival_id = result.events[0].festival_id
     return actor.world.get_entity(parse_entity_id(festival_id)), result
@@ -90,8 +91,8 @@ def test_host_festival_spawns_festival_incident_and_history():
     room = _room(actor.world)
     host = _character(actor.world, room)
 
-    result = HostFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "host-festival", {"theme": "harvest"})
+    result = execute_handler(
+        HostFestivalHandler(), _ctx(actor), _cmd(host.id, "host-festival", {"theme": "harvest"})
     )
 
     assert result.ok
@@ -119,14 +120,14 @@ def test_host_festival_defaults_theme_to_revel():
     actor = WorldActor()
     room = _room(actor.world)
     host = _character(actor.world, room)
-    result = HostFestivalHandler().execute(_ctx(actor), _cmd(host.id, "host-festival", {}))
+    result = execute_handler(HostFestivalHandler(), _ctx(actor), _cmd(host.id, "host-festival", {}))
     assert result.ok
     assert hosted_festivals(actor.world)[0].get_component(HostedFestivalComponent).theme == "revel"
 
 
 def test_host_festival_rejects_invalid_character():
     actor = WorldActor()
-    result = HostFestivalHandler().execute(_ctx(actor), _cmd("???", "host-festival", {}))
+    result = execute_handler(HostFestivalHandler(), _ctx(actor), _cmd("???", "host-festival", {}))
     assert not result.ok
     assert result.reason == "invalid character id"
 
@@ -134,7 +135,7 @@ def test_host_festival_rejects_invalid_character():
 def test_host_festival_rejects_when_not_in_a_room():
     actor = WorldActor()
     host = _character(actor.world)  # not placed in a room
-    result = HostFestivalHandler().execute(_ctx(actor), _cmd(host.id, "host-festival", {}))
+    result = execute_handler(HostFestivalHandler(), _ctx(actor), _cmd(host.id, "host-festival", {}))
     assert not result.ok
     assert result.reason == "you are not in a room"
 
@@ -144,7 +145,7 @@ def test_host_festival_rejects_double_hosting():
     room = _room(actor.world)
     host = _character(actor.world, room)
     _host_a_festival(actor, room, host)
-    result = HostFestivalHandler().execute(_ctx(actor), _cmd(host.id, "host-festival", {}))
+    result = execute_handler(HostFestivalHandler(), _ctx(actor), _cmd(host.id, "host-festival", {}))
     assert not result.ok
     assert result.reason == "you are already hosting a festival"
 
@@ -159,8 +160,10 @@ def test_attend_festival_warms_the_bond_and_lifts_joy():
     guest = _character(actor.world, room, "Guest")
     festival, _ = _host_a_festival(actor, room, host)
 
-    result = AttendFestivalHandler().execute(
-        _ctx(actor), _cmd(guest.id, "attend-festival", {"festival_id": str(festival.id)})
+    result = execute_handler(
+        AttendFestivalHandler(),
+        _ctx(actor),
+        _cmd(guest.id, "attend-festival", {"festival_id": str(festival.id)}),
     )
 
     assert result.ok
@@ -179,8 +182,10 @@ def test_attend_festival_survives_a_departed_host():
     festival, _ = _host_a_festival(actor, room, host)
     actor.world.remove(host.id)  # the host wandered off before the guest arrived
 
-    result = AttendFestivalHandler().execute(
-        _ctx(actor), _cmd(guest.id, "attend-festival", {"festival_id": str(festival.id)})
+    result = execute_handler(
+        AttendFestivalHandler(),
+        _ctx(actor),
+        _cmd(guest.id, "attend-festival", {"festival_id": str(festival.id)}),
     )
 
     assert result.ok
@@ -190,8 +195,10 @@ def test_attend_festival_survives_a_departed_host():
 
 def test_attend_festival_rejects_invalid_character():
     actor = WorldActor()
-    result = AttendFestivalHandler().execute(
-        _ctx(actor), _cmd("???", "attend-festival", {"festival_id": "entity_1"})
+    result = execute_handler(
+        AttendFestivalHandler(),
+        _ctx(actor),
+        _cmd("???", "attend-festival", {"festival_id": "entity_1"}),
     )
     assert not result.ok
     assert result.reason == "invalid character id"
@@ -201,8 +208,10 @@ def test_attend_festival_rejects_invalid_festival_id():
     actor = WorldActor()
     room = _room(actor.world)
     guest = _character(actor.world, room)
-    result = AttendFestivalHandler().execute(
-        _ctx(actor), _cmd(guest.id, "attend-festival", {"festival_id": "???"})
+    result = execute_handler(
+        AttendFestivalHandler(),
+        _ctx(actor),
+        _cmd(guest.id, "attend-festival", {"festival_id": "???"}),
     )
     assert not result.ok
     assert result.reason == "invalid festival id"
@@ -212,8 +221,10 @@ def test_attend_festival_rejects_missing_festival():
     actor = WorldActor()
     room = _room(actor.world)
     guest = _character(actor.world, room)
-    result = AttendFestivalHandler().execute(
-        _ctx(actor), _cmd(guest.id, "attend-festival", {"festival_id": "entity_9999"})
+    result = execute_handler(
+        AttendFestivalHandler(),
+        _ctx(actor),
+        _cmd(guest.id, "attend-festival", {"festival_id": "entity_9999"}),
     )
     assert not result.ok
     assert result.reason == "festival does not exist"
@@ -225,8 +236,10 @@ def test_attend_festival_rejects_non_festival_target():
     guest = _character(actor.world, room)
     crate = spawn_entity(actor.world, [IdentityComponent(name="crate", kind="item")])
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), crate.id)
-    result = AttendFestivalHandler().execute(
-        _ctx(actor), _cmd(guest.id, "attend-festival", {"festival_id": str(crate.id)})
+    result = execute_handler(
+        AttendFestivalHandler(),
+        _ctx(actor),
+        _cmd(guest.id, "attend-festival", {"festival_id": str(crate.id)}),
     )
     assert not result.ok
     assert result.reason == "that is not a festival"
@@ -238,11 +251,15 @@ def test_attend_festival_rejects_ended_festival():
     host = _character(actor.world, room, "Host")
     guest = _character(actor.world, room, "Guest")
     festival, _ = _host_a_festival(actor, room, host)
-    EndFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "end-festival", {"festival_id": str(festival.id)})
+    execute_handler(
+        EndFestivalHandler(),
+        _ctx(actor),
+        _cmd(host.id, "end-festival", {"festival_id": str(festival.id)}),
     )
-    result = AttendFestivalHandler().execute(
-        _ctx(actor), _cmd(guest.id, "attend-festival", {"festival_id": str(festival.id)})
+    result = execute_handler(
+        AttendFestivalHandler(),
+        _ctx(actor),
+        _cmd(guest.id, "attend-festival", {"festival_id": str(festival.id)}),
     )
     assert not result.ok
     assert result.reason == "that festival has ended"
@@ -255,8 +272,10 @@ def test_attend_festival_rejects_festival_in_another_room():
     host = _character(actor.world, room, "Host")
     guest = _character(actor.world, other, "Guest")
     festival, _ = _host_a_festival(actor, room, host)
-    result = AttendFestivalHandler().execute(
-        _ctx(actor), _cmd(guest.id, "attend-festival", {"festival_id": str(festival.id)})
+    result = execute_handler(
+        AttendFestivalHandler(),
+        _ctx(actor),
+        _cmd(guest.id, "attend-festival", {"festival_id": str(festival.id)}),
     )
     assert not result.ok
     assert result.reason == "that festival is not here"
@@ -267,8 +286,10 @@ def test_attend_festival_rejects_host_attending_own_party():
     room = _room(actor.world)
     host = _character(actor.world, room, "Host")
     festival, _ = _host_a_festival(actor, room, host)
-    result = AttendFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "attend-festival", {"festival_id": str(festival.id)})
+    result = execute_handler(
+        AttendFestivalHandler(),
+        _ctx(actor),
+        _cmd(host.id, "attend-festival", {"festival_id": str(festival.id)}),
     )
     assert not result.ok
     assert result.reason == "you are hosting that festival"
@@ -281,8 +302,8 @@ def test_attend_festival_rejects_double_attendance():
     guest = _character(actor.world, room, "Guest")
     festival, _ = _host_a_festival(actor, room, host)
     attend = _cmd(guest.id, "attend-festival", {"festival_id": str(festival.id)})
-    AttendFestivalHandler().execute(_ctx(actor), attend)
-    result = AttendFestivalHandler().execute(_ctx(actor), attend)
+    execute_handler(AttendFestivalHandler(), _ctx(actor), attend)
+    result = execute_handler(AttendFestivalHandler(), _ctx(actor), attend)
     assert not result.ok
     assert result.reason == "you are already at that festival"
 
@@ -297,8 +318,10 @@ def test_end_festival_resolves_the_incident():
     festival, _ = _host_a_festival(actor, room, host)
     incident_id = festival.get_component(HostedFestivalComponent).incident_id
 
-    result = EndFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "end-festival", {"festival_id": str(festival.id)})
+    result = execute_handler(
+        EndFestivalHandler(),
+        _ctx(actor),
+        _cmd(host.id, "end-festival", {"festival_id": str(festival.id)}),
     )
 
     assert result.ok
@@ -324,8 +347,10 @@ def test_end_festival_without_a_live_incident_still_ends():
     )
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), festival.id)
 
-    result = EndFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "end-festival", {"festival_id": str(festival.id)})
+    result = execute_handler(
+        EndFestivalHandler(),
+        _ctx(actor),
+        _cmd(host.id, "end-festival", {"festival_id": str(festival.id)}),
     )
 
     assert result.ok
@@ -348,8 +373,10 @@ def test_end_festival_ignores_a_non_incident_reference():
         ],
     )
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), festival.id)
-    result = EndFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "end-festival", {"festival_id": str(festival.id)})
+    result = execute_handler(
+        EndFestivalHandler(),
+        _ctx(actor),
+        _cmd(host.id, "end-festival", {"festival_id": str(festival.id)}),
     )
     assert result.ok
     assert [type(e).__name__ for e in result.events] == ["FestivalEndedEvent"]
@@ -357,8 +384,8 @@ def test_end_festival_ignores_a_non_incident_reference():
 
 def test_end_festival_rejects_invalid_character():
     actor = WorldActor()
-    result = EndFestivalHandler().execute(
-        _ctx(actor), _cmd("???", "end-festival", {"festival_id": "entity_1"})
+    result = execute_handler(
+        EndFestivalHandler(), _ctx(actor), _cmd("???", "end-festival", {"festival_id": "entity_1"})
     )
     assert not result.ok
     assert result.reason == "invalid character id"
@@ -368,8 +395,8 @@ def test_end_festival_rejects_invalid_festival_id():
     actor = WorldActor()
     room = _room(actor.world)
     host = _character(actor.world, room)
-    result = EndFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "end-festival", {"festival_id": "???"})
+    result = execute_handler(
+        EndFestivalHandler(), _ctx(actor), _cmd(host.id, "end-festival", {"festival_id": "???"})
     )
     assert not result.ok
     assert result.reason == "invalid festival id"
@@ -379,8 +406,10 @@ def test_end_festival_rejects_missing_festival():
     actor = WorldActor()
     room = _room(actor.world)
     host = _character(actor.world, room)
-    result = EndFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "end-festival", {"festival_id": "entity_9999"})
+    result = execute_handler(
+        EndFestivalHandler(),
+        _ctx(actor),
+        _cmd(host.id, "end-festival", {"festival_id": "entity_9999"}),
     )
     assert not result.ok
     assert result.reason == "festival does not exist"
@@ -392,8 +421,10 @@ def test_end_festival_rejects_non_festival_target():
     host = _character(actor.world, room)
     crate = spawn_entity(actor.world, [IdentityComponent(name="crate", kind="item")])
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), crate.id)
-    result = EndFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "end-festival", {"festival_id": str(crate.id)})
+    result = execute_handler(
+        EndFestivalHandler(),
+        _ctx(actor),
+        _cmd(host.id, "end-festival", {"festival_id": str(crate.id)}),
     )
     assert not result.ok
     assert result.reason == "that is not a festival"
@@ -405,8 +436,8 @@ def test_end_festival_rejects_already_ended():
     host = _character(actor.world, room, "Host")
     festival, _ = _host_a_festival(actor, room, host)
     end = _cmd(host.id, "end-festival", {"festival_id": str(festival.id)})
-    EndFestivalHandler().execute(_ctx(actor), end)
-    result = EndFestivalHandler().execute(_ctx(actor), end)
+    execute_handler(EndFestivalHandler(), _ctx(actor), end)
+    result = execute_handler(EndFestivalHandler(), _ctx(actor), end)
     assert not result.ok
     assert result.reason == "that festival has already ended"
 
@@ -417,8 +448,10 @@ def test_end_festival_rejects_non_host():
     host = _character(actor.world, room, "Host")
     stranger = _character(actor.world, room, "Stranger")
     festival, _ = _host_a_festival(actor, room, host)
-    result = EndFestivalHandler().execute(
-        _ctx(actor), _cmd(stranger.id, "end-festival", {"festival_id": str(festival.id)})
+    result = execute_handler(
+        EndFestivalHandler(),
+        _ctx(actor),
+        _cmd(stranger.id, "end-festival", {"festival_id": str(festival.id)}),
     )
     assert not result.ok
     assert result.reason == "only the host can end that festival"
@@ -441,8 +474,10 @@ def test_hosting_fragment_reports_a_wound_down_party():
     room = _room(actor.world)
     host = _character(actor.world, room, "Host")
     festival, _ = _host_a_festival(actor, room, host, theme="harvest")
-    EndFestivalHandler().execute(
-        _ctx(actor), _cmd(host.id, "end-festival", {"festival_id": str(festival.id)})
+    execute_handler(
+        EndFestivalHandler(),
+        _ctx(actor),
+        _cmd(host.id, "end-festival", {"festival_id": str(festival.id)}),
     )
     lines = hosting_fragments(actor.world, host)
     assert "The harvest festival here has wound down." in lines

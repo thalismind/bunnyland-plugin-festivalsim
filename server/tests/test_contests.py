@@ -13,6 +13,7 @@ from bunnyland.core import (
 )
 from bunnyland.core.commands import CommandCost, Lane, build_submitted_command
 from bunnyland.core.handlers import HandlerContext
+from conftest import execute_handler
 
 from bunnyland_festivalsim import (
     ContestComponent,
@@ -105,7 +106,8 @@ def test_enter_contest_registers_a_held_entry():
     contest = spawn_contest(actor.world, room_id=room.id)
     pie = _held(actor.world, character)
 
-    result = EnterContestHandler().execute(
+    result = execute_handler(
+        EnterContestHandler(),
         _ctx(actor),
         _cmd(
             character.id,
@@ -124,7 +126,8 @@ def test_enter_contest_registers_a_held_entry():
 
 def test_enter_contest_rejects_invalid_character():
     actor = WorldActor()
-    result = EnterContestHandler().execute(
+    result = execute_handler(
+        EnterContestHandler(),
         _ctx(actor),
         _cmd("???", "enter-contest", {"contest_id": "entity_1", "entry_id": "entity_2"}),
     )
@@ -136,7 +139,8 @@ def test_enter_contest_rejects_invalid_contest_id():
     actor = WorldActor()
     room = _room(actor.world)
     character = _character(actor.world, room)
-    result = EnterContestHandler().execute(
+    result = execute_handler(
+        EnterContestHandler(),
         _ctx(actor),
         _cmd(character.id, "enter-contest", {"contest_id": "???", "entry_id": "entity_2"}),
     )
@@ -148,7 +152,8 @@ def test_enter_contest_rejects_missing_contest():
     actor = WorldActor()
     room = _room(actor.world)
     character = _character(actor.world, room)
-    result = EnterContestHandler().execute(
+    result = execute_handler(
+        EnterContestHandler(),
         _ctx(actor),
         _cmd(character.id, "enter-contest", {"contest_id": "entity_9999", "entry_id": "entity_2"}),
     )
@@ -162,7 +167,8 @@ def test_enter_contest_rejects_non_contest_target():
     character = _character(actor.world, room)
     crate = spawn_entity(actor.world, [IdentityComponent(name="crate", kind="item")])
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), crate.id)
-    result = EnterContestHandler().execute(
+    result = execute_handler(
+        EnterContestHandler(),
         _ctx(actor),
         _cmd(character.id, "enter-contest", {"contest_id": str(crate.id), "entry_id": "entity_2"}),
     )
@@ -176,7 +182,8 @@ def test_enter_contest_rejects_contest_in_another_room():
     other = _room(actor.world, title="Hall")
     character = _character(actor.world, room)
     contest = spawn_contest(actor.world, room_id=other.id)
-    result = EnterContestHandler().execute(
+    result = execute_handler(
+        EnterContestHandler(),
         _ctx(actor),
         _cmd(
             character.id,
@@ -198,7 +205,8 @@ def test_enter_contest_rejects_closed_contest():
 
     replace_component(contest, ContestComponent(kind="bake-off", is_open=False))
     pie = _held(actor.world, character)
-    result = EnterContestHandler().execute(
+    result = execute_handler(
+        EnterContestHandler(),
         _ctx(actor),
         _cmd(
             character.id,
@@ -215,7 +223,8 @@ def test_enter_contest_rejects_invalid_entry_id():
     room = _room(actor.world)
     character = _character(actor.world, room)
     contest = spawn_contest(actor.world, room_id=room.id)
-    result = EnterContestHandler().execute(
+    result = execute_handler(
+        EnterContestHandler(),
         _ctx(actor),
         _cmd(character.id, "enter-contest", {"contest_id": str(contest.id), "entry_id": "???"}),
     )
@@ -228,7 +237,8 @@ def test_enter_contest_rejects_missing_entry():
     room = _room(actor.world)
     character = _character(actor.world, room)
     contest = spawn_contest(actor.world, room_id=room.id)
-    result = EnterContestHandler().execute(
+    result = execute_handler(
+        EnterContestHandler(),
         _ctx(actor),
         _cmd(
             character.id,
@@ -249,7 +259,8 @@ def test_enter_contest_rejects_unheld_entry():
         actor.world, [IdentityComponent(name="pie", kind="item"), PortableComponent()]
     )
     room.add_relationship(Contains(mode=ContainmentMode.ROOM_CONTENT), loose.id)
-    result = EnterContestHandler().execute(
+    result = execute_handler(
+        EnterContestHandler(),
         _ctx(actor),
         _cmd(
             character.id,
@@ -269,9 +280,9 @@ def test_enter_contest_rejects_double_entry():
     pie = _held(actor.world, character)
     payload = {"contest_id": str(contest.id), "entry_id": str(pie.id)}
     enter = _cmd(character.id, "enter-contest", payload)
-    EnterContestHandler().execute(_ctx(actor), enter)
+    execute_handler(EnterContestHandler(), _ctx(actor), enter)
 
-    result = EnterContestHandler().execute(_ctx(actor), enter)
+    result = execute_handler(EnterContestHandler(), _ctx(actor), enter)
 
     assert not result.ok
     assert result.reason == "that entry is already in the contest"
@@ -292,8 +303,10 @@ def test_judge_contest_crowns_top_entry_with_trophy_and_reputation():
     register_contest_entry(actor.world, contest, worst.id, entrant_id=str(runner_up.id), score=1.0)
     register_contest_entry(actor.world, contest, best.id, entrant_id=str(winner.id), score=9.0)
 
-    result = JudgeContestHandler().execute(
-        _ctx(actor), _cmd(judge.id, "judge-contest", {"contest_id": str(contest.id)})
+    result = execute_handler(
+        JudgeContestHandler(),
+        _ctx(actor),
+        _cmd(judge.id, "judge-contest", {"contest_id": str(contest.id)}),
     )
 
     assert result.ok
@@ -317,8 +330,10 @@ def test_judge_contest_rejects_when_no_entries():
     judge = _character(actor.world, room)
     contest = spawn_contest(actor.world, room_id=room.id)
 
-    result = JudgeContestHandler().execute(
-        _ctx(actor), _cmd(judge.id, "judge-contest", {"contest_id": str(contest.id)})
+    result = execute_handler(
+        JudgeContestHandler(),
+        _ctx(actor),
+        _cmd(judge.id, "judge-contest", {"contest_id": str(contest.id)}),
     )
 
     assert not result.ok
@@ -333,12 +348,16 @@ def test_judge_contest_rejects_already_judged_contest():
     contest = spawn_contest(actor.world, room_id=room.id)
     entry = spawn_entity(actor.world, [IdentityComponent(name="cake", kind="item")])
     register_contest_entry(actor.world, contest, entry.id, entrant_id=str(winner.id), score=1.0)
-    JudgeContestHandler().execute(
-        _ctx(actor), _cmd(judge.id, "judge-contest", {"contest_id": str(contest.id)})
+    execute_handler(
+        JudgeContestHandler(),
+        _ctx(actor),
+        _cmd(judge.id, "judge-contest", {"contest_id": str(contest.id)}),
     )
 
-    result = JudgeContestHandler().execute(
-        _ctx(actor), _cmd(judge.id, "judge-contest", {"contest_id": str(contest.id)})
+    result = execute_handler(
+        JudgeContestHandler(),
+        _ctx(actor),
+        _cmd(judge.id, "judge-contest", {"contest_id": str(contest.id)}),
     )
 
     assert not result.ok
@@ -353,8 +372,10 @@ def test_judge_contest_survives_a_departed_winner():
     entry = spawn_entity(actor.world, [IdentityComponent(name="cake", kind="item")])
     register_contest_entry(actor.world, contest, entry.id, entrant_id="entity_9999", score=1.0)
 
-    result = JudgeContestHandler().execute(
-        _ctx(actor), _cmd(judge.id, "judge-contest", {"contest_id": str(contest.id)})
+    result = execute_handler(
+        JudgeContestHandler(),
+        _ctx(actor),
+        _cmd(judge.id, "judge-contest", {"contest_id": str(contest.id)}),
     )
 
     assert result.ok

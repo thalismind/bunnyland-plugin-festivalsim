@@ -33,12 +33,23 @@ from bunnyland.core.events import DomainEvent, EventVisibility, event_base
 from bunnyland.core.handlers import (
     HandlerContext,
     HandlerResult,
-    ok,
+    planned,
     rejected,
     require_character,
 )
+from bunnyland.core.mutations import (
+    AddEdge,
+    AddEntity,
+    EntityReference,
+    MutationPlan,
+    SetComponentFactory,
+)
 from bunnyland.foundation.environment.mechanics import time_of_day
-from bunnyland.foundation.history.mechanics import record_world_history
+from bunnyland.foundation.history.mechanics import (
+    HistoryActor,
+    HistoryTarget,
+    WorldHistoryRecordComponent,
+)
 from bunnyland.imagegen import ImagePurpose, ImageRequestComponent
 from bunnyland.prompts.context import ComponentPromptContext
 from pydantic.dataclasses import dataclass
@@ -154,39 +165,108 @@ class LaunchFireworksHandler:
         if room is None:
             return rejected("you are not in a room")
 
-        spectacle = spawn_spectacle(ctx.world, room_id=room.id, kind="fireworks")
-        _dazzle_room(ctx.world, room, ctx.epoch)
-        event = FireworksLaunchedEvent(
-            **ctx.event_base(
-                visibility=EventVisibility.ROOM,
-                actor_id=str(launcher_id),
-                room_id=str(room.id),
-                target_ids=(str(spectacle.id),),
-                spectacle_id=str(spectacle.id),
-                launcher_id=str(launcher_id),
-            )
-        )
-        record = record_world_history(
-            ctx.world,
-            summary=f"{_name(launcher)} lit up the sky with fireworks.",
-            source_event_id=event.event_id,
-            event_type="FireworksLaunchedEvent",
-            created_at_epoch=ctx.epoch,
-            location_id=str(room.id),
-            actor_ids=(str(launcher_id),),
-            target_ids=(str(spectacle.id),),
-            tags=("fireworks", "spectacle", "celebration"),
-            salience=0.8,
-        )
-        if record is not None:
-            record.add_component(
-                ImageRequestComponent(
-                    purpose=ImagePurpose.EVENT.value,
-                    requested_at_epoch=ctx.epoch,
-                    requested_by=str(launcher_id),
+        spectacle_ref = EntityReference()
+        history_ref = EntityReference()
+        event_cache: list[FireworksLaunchedEvent] = []
+
+        def make_event() -> FireworksLaunchedEvent:
+            if not event_cache:
+                event_cache.append(
+                    FireworksLaunchedEvent(
+                        **ctx.event_base(
+                            visibility=EventVisibility.ROOM,
+                            actor_id=str(launcher_id),
+                            room_id=str(room.id),
+                            target_ids=(str(spectacle_ref.require()),),
+                            spectacle_id=str(spectacle_ref.require()),
+                            launcher_id=str(launcher_id),
+                        )
+                    )
+                )
+            return event_cache[0]
+
+        summary = f"{_name(launcher)} lit up the sky with fireworks."
+        operations = [
+            AddEntity(
+                (
+                    IdentityComponent(name="fireworks", kind="spectacle", tags=("festivalsim",)),
+                    SpectacleComponent(kind="fireworks"),
+                ),
+                reference=spectacle_ref,
+            ),
+            AddEdge(
+                room.id,
+                spectacle_ref,
+                Contains(mode=ContainmentMode.ROOM_CONTENT),
+            ),
+        ]
+        for entity_id in contents(room):
+            if not ctx.world.has_entity(entity_id):
+                continue
+            entity = ctx.world.get_entity(entity_id)
+            if not entity.has_component(AffectComponent):
+                continue
+            thought_ref = EntityReference()
+            operations.extend(
+                (
+                    AddEntity(
+                        (
+                            ThoughtComponent(
+                                label="wonder",
+                                text="The lights bloom across the sky.",
+                                affect_delta=SPECTACLE_JOY,
+                                created_at_epoch=ctx.epoch,
+                                expires_at_epoch=ctx.epoch + _JOY_TTL_SECONDS,
+                            ),
+                        ),
+                        reference=thought_ref,
+                    ),
+                    AddEdge(entity_id, thought_ref, HasThought()),
                 )
             )
-        return ok(event)
+        operations.extend(
+            (
+                AddEntity(
+                    (
+                        IdentityComponent(name=f"History: {summary}", kind="history"),
+                        WorldHistoryRecordComponent(
+                            summary=summary,
+                            source_event_id="pending",
+                            event_type="FireworksLaunchedEvent",
+                            created_at_epoch=ctx.epoch,
+                            location_id=str(room.id),
+                            tags=("fireworks", "spectacle", "celebration"),
+                            salience=0.8,
+                        ),
+                        ImageRequestComponent(
+                            purpose=ImagePurpose.EVENT.value,
+                            requested_at_epoch=ctx.epoch,
+                            requested_by=str(launcher_id),
+                        ),
+                    ),
+                    reference=history_ref,
+                ),
+                SetComponentFactory(
+                    history_ref,
+                    WorldHistoryRecordComponent,
+                    lambda: WorldHistoryRecordComponent(
+                        summary=summary,
+                        source_event_id=make_event().event_id,
+                        event_type="FireworksLaunchedEvent",
+                        created_at_epoch=ctx.epoch,
+                        location_id=str(room.id),
+                        tags=("fireworks", "spectacle", "celebration"),
+                        salience=0.8,
+                    ),
+                ),
+                AddEdge(history_ref, launcher_id, HistoryActor()),
+                AddEdge(history_ref, spectacle_ref, HistoryTarget()),
+            )
+        )
+        return planned(
+            MutationPlan(tuple(operations)),
+            make_event,
+        )
 
 
 class MeteorShowerSpectacleConsequence:
