@@ -33,7 +33,7 @@ from bunnyland.core import (
 )
 from bunnyland.core.actions import ActionArgument, ActionDefinition, ActionEffort, effort_cost
 from bunnyland.core.commands import Lane, SubmittedCommand
-from bunnyland.core.ecs import entity_name, parse_entity_id, replace_component
+from bunnyland.core.ecs import entity_name, parse_entity_id
 from bunnyland.core.events import DomainEvent, EventVisibility
 from bunnyland.core.handlers import (
     HandlerContext,
@@ -546,30 +546,6 @@ class EndFestivalHandler:
             )
         )
         return planned(MutationPlan(tuple(operations)), *events)
-
-
-def _resolve_incident(
-    ctx: HandlerContext, incident_id: str, host_id
-) -> IncidentResolvedEvent | None:
-    parsed = parse_entity_id(incident_id)
-    if parsed is None or not ctx.world.has_entity(parsed):
-        return None
-    incident_entity = ctx.world.get_entity(parsed)
-    if not incident_entity.has_component(IncidentComponent):
-        return None
-    incident = incident_entity.get_component(IncidentComponent)
-    replace_component(incident_entity, replace(incident, resolved_at_epoch=ctx.epoch))
-    room_id = container_of(incident_entity)
-    return IncidentResolvedEvent(
-        **ctx.event_base(
-            visibility=EventVisibility.ROOM if room_id is not None else EventVisibility.SYSTEM,
-            actor_id=str(host_id),
-            room_id=str(room_id) if room_id is not None else None,
-            target_ids=(str(incident_entity.id),),
-            incident_id=str(incident_entity.id),
-            kind=incident.kind,
-        )
-    )
 
 
 def _lift_joy(world: World, character: Entity, epoch: int) -> None:
