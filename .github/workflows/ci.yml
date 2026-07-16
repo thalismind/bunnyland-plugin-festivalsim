@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout plugin
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: plugin
 
@@ -21,7 +21,7 @@ jobs:
       # ../bunnyland-server/src on sys.path, and its virtualenv provides bunnyland, relics,
       # ruff, and pytest. No container build.
       - name: Checkout bunnyland-server
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: thalismind/bunnyland-server
           ref: main
@@ -29,7 +29,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
 
       - name: Ruff (lint)
         working-directory: plugin/server
@@ -50,7 +50,7 @@ jobs:
 
       - name: Upload reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-reports
           path: plugin/server/reports/
