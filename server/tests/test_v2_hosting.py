@@ -326,6 +326,7 @@ def test_end_festival_resolves_the_incident():
 
     assert result.ok
     assert isinstance(result.events[0], IncidentResolvedEvent)
+    assert result.events[0].room_id == str(room.id)
     assert isinstance(result.events[1], FestivalEndedEvent)
     assert festival.get_component(HostedFestivalComponent).ended is True
     incident = actor.world.get_entity(parse_entity_id(incident_id))

@@ -28,6 +28,7 @@ from bunnyland.core import (
     HasThought,
     IdentityComponent,
     ThoughtComponent,
+    container_of,
     spawn_entity,
 )
 from bunnyland.core.actions import ActionArgument, ActionDefinition, ActionEffort, effort_cost
@@ -166,7 +167,6 @@ def _register_incident(world: World, room: Entity, epoch: int) -> Entity:
                 kind=FESTIVAL_INCIDENT_KIND,
                 budget_spent=0.0,
                 started_at_epoch=epoch,
-                room_id=str(room.id),
             ),
         ],
     )
@@ -262,7 +262,6 @@ class HostFestivalHandler:
                         kind=FESTIVAL_INCIDENT_KIND,
                         budget_spent=0.0,
                         started_at_epoch=ctx.epoch,
-                        room_id=str(room.id),
                     ),
                 ),
                 reference=incident_ref,
@@ -508,6 +507,7 @@ class EndFestivalHandler:
             incident_entity = ctx.world.get_entity(parsed_incident)
             if incident_entity.has_component(IncidentComponent):
                 incident = incident_entity.get_component(IncidentComponent)
+                incident_room_id = container_of(incident_entity)
                 operations.append(
                     SetComponent(
                         parsed_incident,
@@ -517,9 +517,15 @@ class EndFestivalHandler:
                 events.append(
                     IncidentResolvedEvent(
                         **ctx.event_base(
-                            visibility=EventVisibility.ROOM,
+                            visibility=(
+                                EventVisibility.ROOM
+                                if incident_room_id is not None
+                                else EventVisibility.SYSTEM
+                            ),
                             actor_id=str(host_id),
-                            room_id=incident.room_id,
+                            room_id=(
+                                str(incident_room_id) if incident_room_id is not None else None
+                            ),
                             target_ids=(str(parsed_incident),),
                             incident_id=str(parsed_incident),
                             kind=incident.kind,
@@ -553,11 +559,12 @@ def _resolve_incident(
         return None
     incident = incident_entity.get_component(IncidentComponent)
     replace_component(incident_entity, replace(incident, resolved_at_epoch=ctx.epoch))
+    room_id = container_of(incident_entity)
     return IncidentResolvedEvent(
         **ctx.event_base(
-            visibility=EventVisibility.ROOM,
+            visibility=EventVisibility.ROOM if room_id is not None else EventVisibility.SYSTEM,
             actor_id=str(host_id),
-            room_id=incident.room_id,
+            room_id=str(room_id) if room_id is not None else None,
             target_ids=(str(incident_entity.id),),
             incident_id=str(incident_entity.id),
             kind=incident.kind,
